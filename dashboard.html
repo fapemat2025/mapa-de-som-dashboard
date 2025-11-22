@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Som Avançado</title>
+
+<style>
+    body { margin:0; padding:0; background:#F5F7FB; font-family:"Inter",sans-serif; }
+    .header { background:#0D6EFD; padding:15px; color:white; font-size:20px; font-weight:600; }
+    .container { display:flex; gap:20px; padding:20px; flex-wrap:wrap; }
+
+    /* LEFT */
+    .left { flex:1; min-width:300px; }
+    .card { background:white; padding:18px; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:20px; }
+    .card-title { font-size:15px; font-weight:600; margin-bottom:10px; color:#4A4A4A; }
+
+    /* GRAPH */
+    .graph-card { height:350px; position:relative; }
+    #chart { width:100%; height:350px; }
+
+    /* RIGHT */
+    .right { width:320px; display:flex; flex-direction:column; gap:20px; min-width:280px; }
+
+    .value-display { font-size:42px; font-weight:700; color:#0D6EFD; text-align:center; margin-bottom:8px; }
+    .mini-bar { height:8px; background:#FFDD57; border-radius:5px; }
+
+    /* COLOR SCALE */
+    .status-ok { color:#2ECC71; }
+    .status-warning { color:#F1C40F; }
+    .status-danger { color:#E74C3C; }
+
+    /* FILTER BUTTONS */
+    .filters { display:flex; flex-wrap:wrap; gap:8px; }
+    .filter-btn { padding:6px 10px; font-size:12px; border:1px solid #0D6EFD; background:white; color:#0D6EFD; border-radius:6px; cursor:pointer; }
+    .filter-btn.active { background:#0D6EFD; color:white; }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+</head>
+<body>
+<div class="header">Dashboard de Nível de Som (Avançado)</div>
+
+<div class="container">
+
+    <!-- LEFT -->
+    <div class="left">
+
+        <div class="card">
+            <div class="card-title">Intervalo de Tempo</div>
+            <div class="filters">
+                <button class="filter-btn active" data-range="30m">Últimos 30 min</button>
+                <button class="filter-btn" data-range="1h">Última 1h</button>
+                <button class="filter-btn" data-range="24h">Últimas 24h</button>
+                <button class="filter-btn" data-range="7d">Última semana</button>
+                <button class="filter-btn" data-range="30d">Último mês</button>
+            </div>
+        </div>
+
+        <div class="card graph-card">
+            <div class="card-title">Gráfico - Período Selecionado</div>
+
+        <div class="card" id="table-card">
+            <div class="card-title">Tabela de Leituras</div>
+            <div style="max-height:240px; overflow-y:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                        <tr style="background:#f0f2f8;">
+                            <th style="padding:6px 8px; text-align:left;">Horário</th>
+                            <th style="padding:6px 8px; text-align:left;">dB</th>
+                            <th style="padding:6px 8px; text-align:left;">ADC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+            <canvas id="chart"></canvas>
+        </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right">
+
+        <div class="card">
+            <div class="card-title">Nível de Som (Ao Vivo)</div>
+            <div id="valorAtual" class="value-display">-- dB</div>
+            <div class="mini-bar" id="barColor"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Estatísticas</div>
+            <div>Mínimo: <b id="minVal">--</b> dB</div>
+            <div>Médio: <b id="avgVal">--</b> dB</div>
+            <div>Máximo: <b id="maxVal">--</b> dB</div>
+        </div>
+
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyC7TIITtyZhIfJQ0KUiwdsZsxoZL0C_JFc",
+        authDomain: "mapasesom2025.firebaseapp.com",
+        databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
+        projectId: "mapasesom2025",
+        storageBucket: "mapasesom2025.appspot.com",
+        messagingSenderId: "504965389065",
+        appId: "1:504965389065:web:4ddb06768218c9c6e98780"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const valorAtual = document.getElementById("valorAtual");
+    const barColor = document.getElementById("barColor");
+    const minVal = document.getElementById("minVal");
+    const avgVal = document.getElementById("avgVal");
+    const maxVal = document.getElementById("maxVal");
+
+    let range = "30m";
+
+    const ctx = document.getElementById("chart");
+    const chart = new Chart(ctx, {
+        type:"line",
+        data:{ labels:[], datasets:[{ label:"Som (dB)", data:[], borderColor:"#0D6EFD", borderWidth:2, tension:0.25, pointRadius:0 }]},
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} } }
+    });
+
+    function getLimit() {
+        switch(range) {
+            case "30m": return 60;
+            case "1h": return 120;
+            case "24h": return 2000;
+            case "7d": return 15000;
+            case "30d": return 60000;
+        }
+    }
+
+    function update() {
+        const leiturasRef = query(ref(db, "leituras"), limitToLast(getLimit()));
+
+        onValue(leiturasRef, snap => {
+            const data = snap.val();
+            if (!data) return;
+            const arr = Object.values(data);
+
+            const last = arr[arr.length-1];
+            valorAtual.textContent = last.db.toFixed(1) + " dB";
+
+            if (last.db < 50) barColor.style.background="#2ECC71";
+            else if (last.db < 70) barColor.style.background="#F1C40F";
+            else barColor.style.background="#E74C3C";
+
+            chart.data.labels = arr.map(v => new Date(v.timestamp*1000).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}));
+            chart.data.datasets[0].data = arr.map(v => v.db);
+            chart.update();
+
+            const values = arr.map(v=>v.db);
+            minVal.textContent = Math.min(...values).toFixed(1);
+            maxVal.textContent = Math.max(...values).toFixed(1);
+            avgVal.textContent = (values.reduce((a,b)=>a+b,0)/values.length).toFixed(1);
+        });
+    }
+
+    // FILTER BUTTONS
+    document.querySelectorAll('.filter-btn').forEach(btn=>{
+        btn.onclick = () => {
+            document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            range = btn.dataset.range;
+            update();
+        };
+    });
+
+    update();
+</script>
+
+</body>
+</html>
