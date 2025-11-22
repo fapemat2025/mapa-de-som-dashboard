@@ -28,8 +28,13 @@
 
     .card-title { font-size:15px; font-weight:600; margin-bottom:10px; color:#4A4A4A; }
 
-    /* GRAPH */
-    .graph-card { height:350px; position:relative; }
+    /* GRAPH FIXED HEIGHT */
+    .graph-card { 
+        height:350px; 
+        min-height:350px;
+        max-height:350px;
+        position:relative; 
+    }
     #chart { width:100%; height:100% !important; }
 
     /* RIGHT */
@@ -51,7 +56,7 @@
 
     /* TABLE */
     table { width:100%; border-collapse:collapse; font-size:13px; }
-    thead { position:sticky; top:0; background:#f0f2f8; }
+    thead { position:sticky; top:0; background:#f0f2f8; z-index:2; }
     td, th { padding:6px 8px; text-align:left; }
     tbody tr:nth-child(even) { background:#f9f9fc; }
 
@@ -68,7 +73,7 @@
 <script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
 </head>
 <body>
-<div class="header">Dashboard de Nível de Som (Avançado)</div>
+<div class="header">Dashboard de Nível de Som (SALA 1)</div>
 
 <div class="container">
 
@@ -156,8 +161,7 @@
     let range = "30m";
     let currentListener = null;
 
-    const ctx = document.getElementById("chart");
-    const chart = new Chart(ctx, {
+    const chart = new Chart(document.getElementById("chart"), {
         type:"line",
         data:{ 
             labels:[], 
@@ -172,7 +176,8 @@
         },
         options:{
             responsive:true, 
-            maintainAspectRatio:false, 
+            maintainAspectRatio:false,
+            animation:false,
             plugins:{ legend:{display:false} }
         }
     });
@@ -185,6 +190,14 @@
             case "7d": return 15000;
             case "30d": return 60000;
         }
+    }
+
+    function formatTime(ts) {
+        return new Date(ts * 1000).toLocaleTimeString("pt-BR", {
+            hour:"2-digit",
+            minute:"2-digit",
+            timeZone:"America/Cuiaba"
+        });
     }
 
     function update() {
@@ -209,27 +222,23 @@
                 last.db < 70 ? "#F1C40F" :
                 "#E74C3C";
 
-            // Atualiza gráfico
-            chart.data.labels =
-                arr.map(v => new Date(v.timestamp * 1000)
-                .toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" }));
-
+            // Gráfico
+            chart.data.labels = arr.map(v => formatTime(v.timestamp));
             chart.data.datasets[0].data = arr.map(v=>v.db);
             chart.update();
 
-            // Atualiza estatísticas
+            // Estatísticas
             const values = arr.map(v=>v.db);
             minVal.textContent = Math.min(...values).toFixed(1);
             maxVal.textContent = Math.max(...values).toFixed(1);
             avgVal.textContent = (values.reduce((a,b)=>a+b,0)/values.length).toFixed(1);
 
-            // Atualiza tabela
+            // Tabela
             tableBody.innerHTML = "";
             arr.slice().reverse().forEach(v=>{
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td>${new Date(v.timestamp*1000)
-                        .toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</td>
+                    <td>${formatTime(v.timestamp)}</td>
                     <td>${v.db.toFixed(1)}</td>
                     <td>${v.raw}</td>
                 `;
