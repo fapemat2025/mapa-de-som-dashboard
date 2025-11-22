@@ -3,221 +3,132 @@
 <head>
 <meta charset="UTF-8">
 <title>Dashboard Som Avançado</title>
-
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
-    body {
-        margin:0; padding:0;
-        background:#F5F7FB;
-        font-family:"Inter",sans-serif;
+    body { margin:0; padding:0; background:#F5F7FB; font-family:Inter, Arial, sans-serif; }
+    .header { background:#0D6EFD; padding:14px 18px; color:white; font-size:20px; font-weight:600; }
+    .container { display:flex; gap:20px; padding:20px; flex-wrap:wrap; box-sizing:border-box; }
+    .left { flex:1; min-width:320px; }
+    .card { background:#fff; padding:18px; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:20px; }
+    .card-title { font-size:15px; font-weight:600; margin-bottom:10px; color:#333; }
+    .graph-card { height:350px; min-height:350px; max-height:350px; position:relative; overflow:hidden; }
+    #chart { width:100% !important; height:100% !important; display:block; }
+    .right { width:320px; min-width:260px; display:flex; flex-direction:column; gap:20px; }
+    .value-display { font-size:42px; font-weight:700; color:#0D6EFD; text-align:center; margin-bottom:8px; }
+    .mini-bar { height:10px; border-radius:6px; background:#eee; }
+    .filters { display:flex; flex-wrap:wrap; gap:8px; }
+    .filter-btn { padding:6px 10px; font-size:13px; border:1px solid #0D6EFD; background:white; color:#0D6EFD; border-radius:6px; cursor:pointer; }
+    .filter-btn.active { background:#0D6EFD; color:white; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead { position:sticky; top:0; background:#f0f2f8; z-index:2; }
+    td, th { padding:8px 10px; text-align:left; }
+    tbody tr:nth-child(even) { background:#fafbff; }
+    @media(max-width:920px){
+        .container{padding:12px;}
+        .right{width:100%; flex-direction:row; flex-wrap:wrap;}
+        .right .card{flex:1 1 calc(50% - 8px);}
     }
-
-    .header {
-        background:#0D6EFD;
-        padding:15px;
-        color:white;
-        font-size:20px;
-        font-weight:600;
-    }
-
-    .container {
-        display:flex;
-        gap:20px;
-        padding:20px;
-        flex-wrap:wrap;
-        box-sizing:border-box;
-    }
-
-    /* LEFT AREA */
-    .left {
-        flex:1;
-        min-width:350px;
-    }
-
-    .card {
-        background:white;
-        padding:18px;
-        border-radius:12px;
-        box-shadow:0 1px 4px rgba(0,0,0,0.08);
-        margin-bottom:20px;
-    }
-
-    .card-title {
-        font-size:15px;
-        font-weight:600;
-        margin-bottom:10px;
-        color:#4A4A4A;
-    }
-
-    /* FIXED GRAPH SIZE */
-    .graph-card {
-        height:350px;
-        max-height:350px;
-        min-height:350px;
-        position:relative;
-        overflow:hidden; /* Impede estouro */
-    }
-
-    #chart {
-        width:100% !important;
-        height:100% !important;
-    }
-
-    /* RIGHT COLUMN */
-    .right {
-        width:320px;
-        min-width:280px;
-        display:flex;
-        flex-direction:column;
-        gap:20px;
-    }
-
-    .value-display {
-        font-size:42px;
-        font-weight:700;
-        color:#0D6EFD;
-        text-align:center;
-        margin-bottom:8px;
-    }
-
-    .mini-bar {
-        height:8px;
-        background:#FFDD57;
-        border-radius:5px;
-    }
-
-    /* FILTER BUTTONS */
-    .filters {
-        display:flex;
-        flex-wrap:wrap;
-        gap:8px;
-    }
-
-    .filter-btn {
-        padding:6px 10px;
-        font-size:12px;
-        border:1px solid #0D6EFD;
-        background:white;
-        color:#0D6EFD;
-        border-radius:6px;
-        cursor:pointer;
-    }
-
-    .filter-btn.active {
-        background:#0D6EFD;
-        color:white;
-    }
-
-    /* TABLE */
-    table {
-        width:100%;
-        border-collapse:collapse;
-        font-size:13px;
-    }
-
-    thead {
-        position:sticky;
-        top:0;
-        background:#f0f2f8;
-        z-index:2;
-    }
-
-    td, th { padding:6px 8px; }
-
-    tbody tr:nth-child(even) { background:#f9f9fc; }
-
-    /* MOBILE FIX — RIGHT COLUMN GOES HORIZONTAL */
-    @media(max-width:900px){
-        .right {
-            width:100%;
-            flex-direction:row;
-        }
-        .right .card {
-            flex:1;
-        }
+    @media(max-width:520px){
+        .right .card{flex:1 1 100%;}
     }
 </style>
 
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script type="module" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
-</head>
 
+</head>
 <body>
 
 <div class="header">Dashboard de Nível de Som (SALA 1)</div>
 
 <div class="container">
-
-    <!-- LEFT -->
-    <div class="left">
-
-        <div class="card">
-            <div class="card-title">Intervalo de Tempo</div>
-            <div class="filters">
-                <button class="filter-btn active" data-range="30m">Últimos 30 min</button>
-                <button class="filter-btn" data-range="1h">Última 1h</button>
-                <button class="filter-btn" data-range="24h">Últimas 24h</button>
-                <button class="filter-btn" data-range="7d">Última semana</button>
-                <button class="filter-btn" data-range="30d">Último mês</button>
-            </div>
-        </div>
-
-        <div class="card graph-card">
-            <div class="card-title">Gráfico - Período Selecionado</div>
-            <canvas id="chart"></canvas>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Tabela de Leituras</div>
-            <div style="max-height:240px; overflow-y:auto;">
-                <table>
-                    <thead>
-                        <tr><th>Data/Hora</th><th>dB</th><th>ADC</th></tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-            </div>
-        </div>
-
+  <div class="left">
+    <div class="card">
+      <div class="card-title">Intervalo de Tempo</div>
+      <div class="filters">
+        <button class="filter-btn active" data-range="30m">Últimos 30 min</button>
+        <button class="filter-btn" data-range="1h">Última 1h</button>
+        <button class="filter-btn" data-range="24h">Últimas 24h</button>
+        <button class="filter-btn" data-range="7d">Última semana</button>
+        <button class="filter-btn" data-range="30d">Último mês</button>
+      </div>
     </div>
 
-    <!-- RIGHT -->
-    <div class="right">
-
-        <div class="card">
-            <div class="card-title">Nível de Som (Ao Vivo)</div>
-            <div id="valorAtual" class="value-display">-- dB</div>
-            <div class="mini-bar" id="barColor"></div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Estatísticas</div>
-            <div>Mínimo: <b id="minVal">--</b> dB</div>
-            <div>Médio: <b id="avgVal">--</b> dB</div>
-            <div>Máximo: <b id="maxVal">--</b> dB</div>
-        </div>
-
+    <div class="card graph-card">
+      <div class="card-title">Gráfico - Período Selecionado</div>
+      <canvas id="chart"></canvas>
     </div>
+
+    <div class="card">
+      <div class="card-title">Tabela de Leituras</div>
+      <div style="max-height:260px; overflow:auto;">
+        <table>
+          <thead><tr><th>Data / Hora</th><th>dB</th><th>ADC</th></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="card">
+      <div class="card-title">Nível de Som (Ao Vivo)</div>
+      <div id="valorAtual" class="value-display">-- dB</div>
+      <div class="mini-bar" id="barColor"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Estatísticas</div>
+      <div>Mínimo: <b id="minVal">--</b> dB</div>
+      <div>Médio: <b id="avgVal">--</b> dB</div>
+      <div>Máximo: <b id="maxVal">--</b> dB</div>
+    </div>
+  </div>
 </div>
 
 <script type="module">
-
+/* ========== CONFIGURE FIREBASE (keep your config) ========== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, query, limitToLast, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyC7TIITtyZhIfJQ0KUiwdsZsxoZL0C_JFc",
-    authDomain: "mapasesom2025.firebaseapp.com",
-    databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
-    projectId: "mapasesom2025",
-    storageBucket: "mapasesom2025.appspot.com",
-    messagingSenderId: "504965389065",
-    appId: "1:504965389065:web:4ddb06768218c9c6e98780"
+  apiKey: "AIzaSyC7TIITtyZhIfJQ0KUiwdsZsxoZL0C_JFc",
+  authDomain: "mapasesom2025.firebaseapp.com",
+  databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
+  projectId: "mapasesom2025",
+  storageBucket: "mapasesom2025.appspot.com",
+  messagingSenderId: "504965389065",
+  appId: "1:504965389065:web:4ddb06768218c9c6e98780"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+/* ========== HELPERS ========== */
+// Fix timestamp automatically (accepts seconds or milliseconds)
+function fixTimestamp(ts){
+  // ensure number
+  const n = Number(ts);
+  if (isNaN(n)) return Date.now();
+  // If less than 2e9 it's seconds => convert to ms
+  return n < 2000000000 ? n * 1000 : n;
+}
+
+// Format for Cuiabá (America/Cuiaba)
+function formatTimeFull(ts){
+  return new Date(fixTimestamp(ts)).toLocaleString("pt-BR", {
+    timeZone: "America/Cuiaba",
+    year:"numeric", month:"2-digit", day:"2-digit",
+    hour:"2-digit", minute:"2-digit", hour12:false
+  });
+}
+function formatTimeShort(ts){
+  return new Date(fixTimestamp(ts)).toLocaleTimeString("pt-BR", {
+    timeZone: "America/Cuiaba", hour:"2-digit", minute:"2-digit", hour12:false
+  });
+}
+
+/* ========== DOM ========== */
 const valorAtual = document.getElementById("valorAtual");
 const barColor = document.getElementById("barColor");
 const minVal = document.getElementById("minVal");
@@ -226,105 +137,109 @@ const maxVal = document.getElementById("maxVal");
 const tableBody = document.getElementById("tableBody");
 
 let range = "30m";
-let currentListener = null;
+let currentRef = null;
 
+/* ========== CHART ========== */
 const chart = new Chart(document.getElementById("chart"), {
-    type:"line",
-    data:{ labels:[], datasets:[{
-        label:"Som (dB)",
-        data:[],
-        borderColor:"#0D6EFD",
-        borderWidth:2,
-        tension:0.25,
-        pointRadius:0
-    }]},
-    options:{
-        responsive:true,
-        maintainAspectRatio:false,
-        animation:false,
-        plugins:{ legend:{display:false} }
+  type: "line",
+  data: { labels: [], datasets: [{ label: "dB", data: [], borderColor:"#1a73e8", backgroundColor: "rgba(26,115,232,0.06)", tension:0.25, pointRadius:0 }] },
+  options: {
+    responsive:true,
+    maintainAspectRatio:false,
+    animation:false,
+    scales:{ x:{ display:true }, y:{ beginAtZero:false } },
+    plugins:{ legend:{ display:false } }
+  }
+});
+
+/* ========== DATA LOAD / REaltime ========== */
+function getLimitForRange(r){
+  switch(r){
+    case "30m": return 60;
+    case "1h": return 120;
+    case "24h": return 2000;
+    case "7d": return 15000;
+    case "30d": return 60000;
+    default: return 500;
+  }
+}
+
+function detachCurrent(){
+  if (currentRef) {
+    try { off(currentRef); } catch(e){ console.warn(e); }
+    currentRef = null;
+  }
+}
+
+function attachListener(){
+  detachCurrent();
+  const lim = getLimitForRange(range);
+  const r = query(ref(db, "leituras"), limitToLast(lim));
+  currentRef = r;
+  onValue(r, snap => {
+    const data = snap.val();
+    if (!data) {
+      // clear UI
+      chart.data.labels = [];
+      chart.data.datasets[0].data = [];
+      chart.update();
+      tableBody.innerHTML = "";
+      valorAtual.textContent = "-- dB";
+      minVal.textContent = avgVal.textContent = maxVal.textContent = "--";
+      return;
     }
-});
+    const arr = Object.values(data);
+    // ensure chronological order
+    arr.sort((a,b)=> fixTimestamp(a.timestamp) - fixTimestamp(b.timestamp));
 
-function getLimit() {
-    return {
-        "30m": 60,
-        "1h": 120,
-        "24h": 2000,
-        "7d": 15000,
-        "30d": 60000
-    }[range];
-}
+    // live value
+    const last = arr[arr.length-1];
+    if (last && typeof last.db !== "undefined"){
+      valorAtual.textContent = Number(last.db).toFixed(1) + " dB";
+      barColor.style.background = last.db < 50 ? "#2ECC71" : (last.db < 70 ? "#F1C40F" : "#E74C3C");
+    }
 
-function formatTime(ts) {
-    return new Date(ts * 1000).toLocaleString("pt-BR", {
-        year:"2-digit", month:"2-digit", day:"2-digit",
-        hour:"2-digit", minute:"2-digit",
-        hour12:false,
-        timeZone:"America/Sao_Paulo"
+    // chart
+    chart.data.labels = arr.map(v => formatTimeShort(v.timestamp));
+    chart.data.datasets[0].data = arr.map(v => Number(v.db));
+    chart.update();
+
+    // stats
+    const vals = arr.map(v=>Number(v.db)).filter(n=>!isNaN(n));
+    if (vals.length){
+      minVal.textContent = Math.min(...vals).toFixed(1);
+      maxVal.textContent = Math.max(...vals).toFixed(1);
+      avgVal.textContent = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+    } else {
+      minVal.textContent = avgVal.textContent = maxVal.textContent = "--";
+    }
+
+    // table (recent first)
+    tableBody.innerHTML = "";
+    arr.slice().reverse().forEach(v=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${formatTimeFull(v.timestamp)}</td><td>${Number(v.db).toFixed(1)}</td><td>${v.adc ?? v.raw ?? ""}</td>`;
+      tableBody.appendChild(tr);
     });
+
+  }, err => {
+    console.error("Firebase read error", err);
+  });
 }
 
-function update() {
-
-    if (currentListener) off(currentListener);
-
-    const leiturasRef = query(ref(db, "leituras"), limitToLast(getLimit()));
-    currentListener = leiturasRef;
-
-    onValue(leiturasRef, snap => {
-        const data = snap.val();
-        if (!data) return;
-
-        const arr = Object.values(data);
-        const last = arr[arr.length-1];
-
-        valorAtual.textContent = last.db.toFixed(1) + " dB";
-
-        barColor.style.background =
-            last.db < 50 ? "#2ECC71" :
-            last.db < 70 ? "#F1C40F" :
-            "#E74C3C";
-
-        chart.data.labels = arr.map(v =>
-            new Date(v.timestamp * 1000)
-            .toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})
-        );
-
-        chart.data.datasets[0].data = arr.map(v => v.db);
-        chart.update();
-
-        const values = arr.map(v=>v.db);
-        minVal.textContent = Math.min(...values).toFixed(1);
-        maxVal.textContent = Math.max(...values).toFixed(1);
-        avgVal.textContent = (values.reduce((a,b)=>a+b,0)/values.length).toFixed(1);
-
-        tableBody.innerHTML = "";
-        arr.slice().reverse().forEach(v=>{
-            tableBody.innerHTML += `
-                <tr>
-                    <td>${formatTime(v.timestamp)}</td>
-                    <td>${v.db.toFixed(1)}</td>
-                    <td>${v.raw}</td>
-                </tr>
-            `;
-        });
-
-    });
-}
-
+/* ========== UI: filters ========== */
 document.querySelectorAll('.filter-btn').forEach(btn=>{
-    btn.onclick = () => {
-        document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        range = btn.dataset.range;
-        update();
-    };
+  btn.addEventListener('click', ()=> {
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    range = btn.dataset.range;
+    attachListener();
+  });
 });
 
-update();
+// initial
+attachListener();
 
 </script>
-
 </body>
 </html>
