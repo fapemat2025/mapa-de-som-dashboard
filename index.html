@@ -5,65 +5,98 @@
 <title>Dashboard Som Avançado</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
-    body { margin:0; padding:0; background:#F5F7FB; font-family:Inter, Arial, sans-serif; }
-    .header { background:#0D6EFD; padding:14px 18px; color:white; font-size:20px; font-weight:600; }
-    .container { display:flex; gap:20px; padding:20px; flex-wrap:wrap; box-sizing:border-box; }
-    .left { flex:1; min-width:320px; }
-    .card { background:#fff; padding:18px; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:20px; }
-    .card-title { font-size:15px; font-weight:600; margin-bottom:10px; color:#333; }
-    .graph-card { height:350px; min-height:350px; max-height:350px; position:relative; overflow:hidden; }
-    #chart { width:100% !important; height:100% !important; display:block; }
-    .right { width:320px; min-width:260px; display:flex; flex-direction:column; gap:20px; }
-    .value-display { font-size:42px; font-weight:700; color:#0D6EFD; text-align:center; margin-bottom:8px; }
-    .mini-bar { height:10px; border-radius:6px; background:#eee; }
-    .filters { display:flex; flex-wrap:wrap; gap:8px; }
-    .filter-btn { padding:6px 10px; font-size:13px; border:1px solid #0D6EFD; background:white; color:#0D6EFD; border-radius:6px; cursor:pointer; }
-    .filter-btn.active { background:#0D6EFD; color:white; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    thead { position:sticky; top:0; background:#f0f2f8; z-index:2; }
-    td, th { padding:8px 10px; text-align:left; }
-    tbody tr:nth-child(even) { background:#fafbff; }
-    @media(max-width:920px){
-        .container{padding:12px;}
-        .right{width:100%; flex-direction:row; flex-wrap:wrap;}
-        .right .card{flex:1 1 calc(50% - 8px);}
+    /* ========== ESTILOS GERAIS ========== */
+    body { margin:0; padding:0; background:#F5F7FB; font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #333; }
+    .header { background:#0D6EFD; padding:16px 20px; color:white; font-size:20px; font-weight:600; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    .container { display:flex; gap:20px; padding:20px; flex-wrap:wrap; box-sizing:border-box; max-width: 1400px; margin: 0 auto; }
+    
+    /* Coluna Esquerda (Gráfico e Filtros) */
+    .left { flex:1; min-width:300px; display: flex; flex-direction: column; gap: 20px; }
+    
+    /* Coluna Direita (Cards Laterais) */
+    .right { width:320px; min-width:280px; display:flex; flex-direction:column; gap:20px; }
+
+    /* Cards */
+    .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.02); }
+    .card-title { font-size:14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight:700; margin-bottom:15px; color:#555; }
+    
+    /* Gráfico */
+    .graph-card { height:400px; min-height:400px; position:relative; }
+    #chart { width:100% !important; height:100% !important; }
+
+    /* Valores e Barras */
+    .value-display { font-size:48px; font-weight:700; color:#0D6EFD; text-align:center; margin: 10px 0; letter-spacing: -1px; }
+    .mini-bar { height:12px; border-radius:6px; background:#eee; transition: background 0.3s ease; }
+    
+    /* Filtros */
+    .filters { display:flex; flex-wrap:wrap; gap:10px; }
+    .filter-btn { 
+        padding:8px 16px; font-size:13px; font-weight: 500;
+        border:1px solid #0D6EFD; background:transparent; color:#0D6EFD; 
+        border-radius:20px; cursor:pointer; transition: all 0.2s;
     }
-    @media(max-width:520px){
+    .filter-btn:hover { background: rgba(13, 110, 253, 0.1); }
+    .filter-btn.active { background:#0D6EFD; color:white; box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3); }
+
+    /* Estatísticas */
+    .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-val { font-weight: 700; color: #333; }
+
+    /* Tabela */
+    .table-container { max-height: 300px; overflow: auto; scrollbar-width: thin; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead { position:sticky; top:0; background:#fff; z-index:2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    td, th { padding:10px 12px; text-align:left; border-bottom: 1px solid #f0f0f0; }
+    th { color: #888; font-weight: 600; }
+    tbody tr:hover { background:#f9faff; }
+
+    /* Responsividade */
+    @media(max-width:920px){
+        .container{padding:10px;}
+        .right{width:100%; flex-direction:row; flex-wrap:wrap;}
+        .right .card{flex:1 1 calc(50% - 10px);}
+    }
+    @media(max-width:600px){
         .right .card{flex:1 1 100%;}
+        .value-display { font-size: 36px; }
+        .graph-card { height: 300px; min-height: 300px; }
     }
 </style>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
 <body>
 
-<div class="header">Dashboard de Nível de Som (SALA 1)</div>
+<div class="header">Dashboard Monitoramento de Ruído</div>
 
 <div class="container">
+  
   <div class="left">
+    
     <div class="card">
-      <div class="card-title">Intervalo de Tempo</div>
+      <div class="card-title">Período de Análise</div>
       <div class="filters">
-        <button class="filter-btn active" data-range="30m">Últimos 30 min</button>
-        <button class="filter-btn" data-range="1h">Última 1h</button>
-        <button class="filter-btn" data-range="24h">Últimas 24h</button>
-        <button class="filter-btn" data-range="7d">Última semana</button>
-        <button class="filter-btn" data-range="30d">Último mês</button>
+        <button class="filter-btn active" data-range="30m">30 min</button>
+        <button class="filter-btn" data-range="1h">1 hora</button>
+        <button class="filter-btn" data-range="24h">24 horas</button>
+        <button class="filter-btn" data-range="7d">7 dias</button>
+        <button class="filter-btn" data-range="30d">30 dias</button>
       </div>
     </div>
 
     <div class="card graph-card">
-      <div class="card-title">Gráfico - Período Selecionado</div>
+      <div class="card-title">Variação no Período (Tendência)</div>
       <canvas id="chart"></canvas>
     </div>
 
     <div class="card">
-      <div class="card-title">Tabela de Leituras</div>
-      <div style="max-height:260px; overflow:auto;">
+      <div class="card-title">Últimas Leituras (Detalhado)</div>
+      <div class="table-container">
         <table>
-          <thead><tr><th>Data / Hora</th><th>dB</th><th>ADC</th></tr></thead>
+          <thead><tr><th>Horário</th><th>Nível (dB)</th><th>Status</th></tr></thead>
           <tbody id="tableBody"></tbody>
         </table>
       </div>
@@ -71,23 +104,35 @@
   </div>
 
   <div class="right">
+    
     <div class="card">
-      <div class="card-title">Nível de Som (Ao Vivo)</div>
+      <div class="card-title">Nível Atual (Ao Vivo)</div>
       <div id="valorAtual" class="value-display">-- dB</div>
       <div class="mini-bar" id="barColor"></div>
+      <div style="text-align:center; margin-top:5px; font-size:12px; color:#888;">Atualizado em tempo real</div>
     </div>
 
     <div class="card">
-      <div class="card-title">Estatísticas</div>
-      <div>Mínimo: <b id="minVal">--</b> dB</div>
-      <div>Médio: <b id="avgVal">--</b> dB</div>
-      <div>Máximo: <b id="maxVal">--</b> dB</div>
+      <div class="card-title">Estatísticas do Período</div>
+      <div class="stat-row">
+        <span>Mínimo</span>
+        <span class="stat-val" id="minVal">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Média</span>
+        <span class="stat-val" id="avgVal">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Máximo</span>
+        <span class="stat-val" id="maxVal">--</span>
+      </div>
     </div>
+
   </div>
 </div>
 
 <script type="module">
-/* ========== CONFIGURE FIREBASE (keep your config) ========== */
+/* ========== CONFIGURAÇÃO DO FIREBASE ========== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, query, limitToLast, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -104,64 +149,138 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* ========== HELPERS ========== */
-// Fix timestamp automatically (accepts seconds or milliseconds)
+/* ========== UTILITÁRIOS DE TEMPO ========== */
 function fixTimestamp(ts){
-  // ensure number
   const n = Number(ts);
   if (isNaN(n)) return Date.now();
-  // If less than 2e9 it's seconds => convert to ms
+  // Se for timestamp unix em segundos (< 2026 em segundos é ~1.7bi), converte p/ ms
   return n < 2000000000 ? n * 1000 : n;
 }
 
-// Format for Cuiabá (America/Cuiaba)
 function formatTimeFull(ts){
   return new Date(fixTimestamp(ts)).toLocaleString("pt-BR", {
     timeZone: "America/Cuiaba",
-    year:"numeric", month:"2-digit", day:"2-digit",
-    hour:"2-digit", minute:"2-digit", hour12:false
+    day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
   });
 }
 function formatTimeShort(ts){
   return new Date(fixTimestamp(ts)).toLocaleTimeString("pt-BR", {
-    timeZone: "America/Cuiaba", hour:"2-digit", minute:"2-digit", hour12:false
+    timeZone: "America/Cuiaba", hour:"2-digit", minute:"2-digit"
   });
 }
 
-/* ========== DOM ========== */
+/* ========== ELEMENTOS DOM ========== */
 const valorAtual = document.getElementById("valorAtual");
 const barColor = document.getElementById("barColor");
 const minVal = document.getElementById("minVal");
 const avgVal = document.getElementById("avgVal");
 const maxVal = document.getElementById("maxVal");
 const tableBody = document.getElementById("tableBody");
-
 let range = "30m";
 let currentRef = null;
 
-/* ========== CHART ========== */
-const chart = new Chart(document.getElementById("chart"), {
+/* ========== CONFIGURAÇÃO DO GRÁFICO (Estilo Google) ========== */
+const ctx = document.getElementById("chart").getContext("2d");
+
+// Gradiente Vertical
+const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+gradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)'); // Azul topo
+gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)'); // Transparente base
+
+const chart = new Chart(ctx, {
   type: "line",
-  data: { labels: [], datasets: [{ label: "dB", data: [], borderColor:"#1a73e8", backgroundColor: "rgba(26,115,232,0.06)", tension:0.25, pointRadius:0 }] },
+  data: {
+    labels: [],
+    datasets: [{
+      label: "Nível Sonoro",
+      data: [],
+      borderColor: "#0D6EFD",
+      backgroundColor: gradient,
+      borderWidth: 2,
+      pointRadius: 0,        // Sem bolinhas por padrão
+      pointHoverRadius: 6,   // Bolinha ao passar o mouse
+      fill: true,            // Preencher área
+      tension: 0.2           // Curva suave
+    }]
+  },
   options: {
-    responsive:true,
-    maintainAspectRatio:false,
-    animation:false,
-    scales:{ x:{ display:true }, y:{ beginAtZero:false } },
-    plugins:{ legend:{ display:false } }
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: { 
+        display: true, 
+        grid: { display: false }, // Remove grade X para limpar
+        ticks: { maxTicksLimit: 8, maxRotation: 0 }
+      },
+      y: { 
+        beginAtZero: false,
+        grid: { color: '#f3f3f3' }, // Grade Y bem leve
+        suggestedMin: 30,
+        suggestedMax: 100
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#333',
+        bodyColor: '#0D6EFD',
+        titleFont: { size: 13 },
+        bodyFont: { size: 14, weight: 'bold' },
+        borderColor: '#e0e0e0',
+        borderWidth: 1,
+        displayColors: false,
+        callbacks: {
+          label: function(context) {
+            return context.parsed.y.toFixed(1) + ' dB';
+          }
+        }
+      }
+    }
   }
 });
 
-/* ========== DATA LOAD / REaltime ========== */
+/* ========== LÓGICA DE DADOS ========== */
+
+// Limites de busca no Firebase (para ter dados suficientes para estatísticas)
 function getLimitForRange(r){
   switch(r){
-    case "30m": return 60;
-    case "1h": return 120;
-    case "24h": return 2000;
-    case "7d": return 15000;
-    case "30d": return 60000;
+    case "30m": return 100;    // ~2 leituras por minuto
+    case "1h": return 200;
+    case "24h": return 2000;   // Bastante dados para calcular média real
+    case "7d": return 10000;
+    case "30d": return 30000;
     default: return 500;
   }
+}
+
+// Algoritmo de Suavização (Tipo Google Finance)
+// Transforma 5000 pontos em ~100 pontos calculando a média dos intervalos
+function aggregateData(dataArray, targetPoints = 120) {
+  if (dataArray.length <= targetPoints) return dataArray;
+
+  const result = [];
+  const step = Math.ceil(dataArray.length / targetPoints);
+
+  for (let i = 0; i < dataArray.length; i += step) {
+    const chunk = dataArray.slice(i, i + step);
+    if(chunk.length === 0) continue;
+
+    // Média do chunk
+    const sum = chunk.reduce((acc, curr) => acc + Number(curr.db), 0);
+    const avg = sum / chunk.length;
+    
+    // Pega o timestamp central
+    const centerItem = chunk[Math.floor(chunk.length / 2)];
+    
+    result.push({
+      timestamp: centerItem.timestamp,
+      db: avg
+    });
+  }
+  return result;
 }
 
 function detachCurrent(){
@@ -173,61 +292,86 @@ function detachCurrent(){
 
 function attachListener(){
   detachCurrent();
+  
+  // 1. Mostrar estado de carregamento (opcional, mas bom pra UX)
+  chart.data.datasets[0].label = "Carregando...";
+  
   const lim = getLimitForRange(range);
   const r = query(ref(db, "leituras"), limitToLast(lim));
   currentRef = r;
+
   onValue(r, snap => {
     const data = snap.val();
     if (!data) {
-      // clear UI
-      chart.data.labels = [];
-      chart.data.datasets[0].data = [];
-      chart.update();
-      tableBody.innerHTML = "";
+      // Limpa tudo se não tiver dados
+      chart.data.labels = []; chart.data.datasets[0].data = []; chart.update();
       valorAtual.textContent = "-- dB";
-      minVal.textContent = avgVal.textContent = maxVal.textContent = "--";
       return;
     }
+
+    // Converter objeto para array e ordenar por tempo
     const arr = Object.values(data);
-    // ensure chronological order
     arr.sort((a,b)=> fixTimestamp(a.timestamp) - fixTimestamp(b.timestamp));
 
-    // live value
+    // --- A. ATUALIZAÇÃO AO VIVO (Sempre o último dado real) ---
     const last = arr[arr.length-1];
     if (last && typeof last.db !== "undefined"){
-      valorAtual.textContent = Number(last.db).toFixed(1) + " dB";
-      barColor.style.background = last.db < 50 ? "#2ECC71" : (last.db < 70 ? "#F1C40F" : "#E74C3C");
+      const dbVal = Number(last.db);
+      valorAtual.textContent = dbVal.toFixed(1) + " dB";
+      
+      // Cores semáforo
+      let color = "#2ECC71"; // Verde
+      if(dbVal >= 60) color = "#F1C40F"; // Amarelo
+      if(dbVal >= 75) color = "#E74C3C"; // Vermelho
+      barColor.style.background = color;
     }
 
-    // chart
-    chart.data.labels = arr.map(v => formatTimeShort(v.timestamp));
-    chart.data.datasets[0].data = arr.map(v => Number(v.db));
-    chart.update();
-
-    // stats
+    // --- B. ESTATÍSTICAS (Baseadas em todos os dados baixados) ---
     const vals = arr.map(v=>Number(v.db)).filter(n=>!isNaN(n));
     if (vals.length){
-      minVal.textContent = Math.min(...vals).toFixed(1);
-      maxVal.textContent = Math.max(...vals).toFixed(1);
-      avgVal.textContent = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
-    } else {
-      minVal.textContent = avgVal.textContent = maxVal.textContent = "--";
+      minVal.textContent = Math.min(...vals).toFixed(1) + " dB";
+      maxVal.textContent = Math.max(...vals).toFixed(1) + " dB";
+      const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+      avgVal.textContent = avg.toFixed(1) + " dB";
     }
 
-    // table (recent first)
+    // --- C. PREPARAÇÃO DO GRÁFICO (Com suavização se necessário) ---
+    let chartData = arr;
+    // Se for período longo, aplica a redução de pontos (Agregação)
+    if (["24h", "7d", "30d"].includes(range)) {
+      chartData = aggregateData(arr, 150); // Reduz para ~150 pontos
+    }
+
+    chart.data.labels = chartData.map(v => range === "24h" ? formatTimeShort(v.timestamp) : formatTimeFull(v.timestamp));
+    chart.data.datasets[0].data = chartData.map(v => Number(v.db));
+    chart.data.datasets[0].label = range === "30m" || range === "1h" ? "Nível Real" : "Nível Médio";
+    chart.update();
+
+    // --- D. TABELA (Mostra apenas os 50 mais recentes REAIS) ---
     tableBody.innerHTML = "";
-    arr.slice().reverse().forEach(v=>{
+    arr.slice(-50).reverse().forEach(v => {
+      const dbVal = Number(v.db);
+      let status = "Normal";
+      let color = "#2ECC71";
+      
+      if(dbVal >= 60) { status = "Atenção"; color = "#F1C40F"; }
+      if(dbVal >= 75) { status = "Alto"; color = "#E74C3C"; }
+
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${formatTimeFull(v.timestamp)}</td><td>${Number(v.db).toFixed(1)}</td><td>${v.adc ?? v.raw ?? ""}</td>`;
+      tr.innerHTML = `
+        <td>${formatTimeFull(v.timestamp)}</td>
+        <td><strong>${dbVal.toFixed(1)}</strong></td>
+        <td><span style="color:${color}; font-weight:600; font-size:12px;">${status}</span></td>
+      `;
       tableBody.appendChild(tr);
     });
 
   }, err => {
-    console.error("Firebase read error", err);
+    console.error("Erro Firebase:", err);
   });
 }
 
-/* ========== UI: filters ========== */
+/* ========== INTERAÇÃO BOTÕES ========== */
 document.querySelectorAll('.filter-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> {
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -237,7 +381,7 @@ document.querySelectorAll('.filter-btn').forEach(btn=>{
   });
 });
 
-// initial
+// Inicializa
 attachListener();
 
 </script>
