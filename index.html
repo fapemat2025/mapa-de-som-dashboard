@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Central de Monitoramento Sonoro</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
     /* ========== ESTILOS GERAIS ========== */
     body { margin:0; padding:0; background:#F5F7FB; font-family:'Inter', sans-serif; color: #333; }
@@ -114,7 +115,8 @@
 
     <div id="view-map">
         <div class="sensor-grid" id="gridContainer">
-            </div>
+            <!-- Sensores serão injetados aqui -->
+        </div>
     </div>
 
     <div id="view-detail">
@@ -178,26 +180,28 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, query, limitToLast, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+// Credenciais do seu projeto Firebase (mantidas as originais)
 const firebaseConfig = {
-  apiKey: "AIzaSyC7TIITtyZhIfJQ0KUiwdsZsxoZL0C_JFc",
-  authDomain: "mapasesom2025.firebaseapp.com",
-  databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
-  projectId: "mapasesom2025",
-  storageBucket: "mapasesom2025.appspot.com",
-  messagingSenderId: "504965389065",
-  appId: "1:504965389065:web:4ddb06768218c9c6e98780"
+    apiKey: "AIzaSyC7TIITtyZhIfJQ0KUiwdsZsxoZL0C_JFc",
+    authDomain: "mapasesom2025.firebaseapp.com",
+    databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
+    projectId: "mapasesom2025",
+    storageBucket: "mapasesom2025.appspot.com",
+    messagingSenderId: "504965389065",
+    appId: "1:504965389065:web:4ddb06768218c9c6e98780"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// MAPA DE SENSORES
+// 🚨 CORREÇÃO CRÍTICA: Ajustando os IDs para corresponderem ao ESP32 (Sala_1, Sala_2, etc.)
+// O caminho no ESP32 é /leituras/Sala_1
 const SENSORS = [
-    { id: "sala1", name: "Sala 01 - Recepção" },
-    { id: "sala2", name: "Sala 02 - Produção" },
-    { id: "sala3", name: "Sala 03 - Reunião" },
-    { id: "sala4", name: "Sala 04 - Corredor" },
-    { id: "sala5", name: "Sala 05 - Externa" }
+    { id: "Sala_1", name: "Sala 01 - Recepção" }, // ID CORRIGIDO
+    { id: "Sala_2", name: "Sala 02 - Produção" },
+    { id: "Sala_3", name: "Sala 03 - Reunião" },
+    { id: "Sala_4", name: "Sala 04 - Corredor" },
+    { id: "Sala_5", name: "Sala 05 - Externa" }
 ];
 
 /* ================== ESTADO ================== */
@@ -205,16 +209,17 @@ let activeSensorId = null;
 let activeRange = "30m";
 let detailListener = null;
 
-// Armazena dados brutos para filtrar localmente sem recarregar o banco
 let cachedData = []; 
-let tableFilter = "all"; // all, normal, atencao, alto
+let tableFilter = "all"; 
 
 /* ================== HELPERS ================== */
 function fixTimestamp(ts){
-  const n = Number(ts); return isNaN(n) ? Date.now() : (n < 2000000000 ? n * 1000 : n);
+    const n = Number(ts); 
+    // Se o timestamp for pequeno (segundos), multiplica por 1000. Se for grande (millis), usa direto.
+    return isNaN(n) ? Date.now() : (n < 2000000000 ? n * 1000 : n);
 }
 function formatTime(ts){
-  return new Date(fixTimestamp(ts)).toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+    return new Date(fixTimestamp(ts)).toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
 }
 function getStatusColor(db){
     if(db < 60) return { color: "#2ECC71", text: "Normal", class: "status-normal", border: "#2ECC71", code: "normal" };
@@ -230,21 +235,33 @@ function initMap(){
     SENSORS.forEach(sensor => {
         const card = document.createElement('div');
         card.className = "sensor-card";
+        card.id = `card-${sensor.id}`; // Adiciona ID no card
         card.innerHTML = `
             <div class="sensor-name">${sensor.name}</div>
             <div class="sensor-value" id="val-${sensor.id}">--</div>
             <div class="sensor-status" id="status-${sensor.id}">Offline</div>
             <div class="sensor-update" id="time-${sensor.id}">--:--</div>
-            <div class="sensor-icon">🔊</div>
+            <div class="sensor-icon"></div>
         `;
         card.addEventListener('click', () => openDetail(sensor));
         gridContainer.appendChild(card);
 
-        const r = query(ref(db, `sensors/${sensor.id}/leituras`), limitToLast(1));
+        // 🚨 CORREÇÃO CRÍTICA: O path agora é /leituras/${sensor.id}
+        // O ESP32 usa "leituras" como nó raiz.
+        const r = query(ref(db, `leituras/${sensor.id}`), limitToLast(1));
+        
         onValue(r, (snap) => {
             const data = snap.val();
-            if(!data) return;
-            const reading = Object.values(data)[0];
+            
+            // Verifica se o snapshot tem dados (deve ter um nó de timestamp)
+            if(!data) {
+                document.getElementById(`status-${sensor.id}`).textContent = "Offline / Sem Dados";
+                document.getElementById(`card-${sensor.id}`).style.borderLeftColor = "#ccc";
+                return;
+            }
+            
+            // Pega o último registro (o último timestamp é a chave)
+            const reading = Object.values(data)[0]; 
             
             const valEl = document.getElementById(`val-${sensor.id}`);
             const statusEl = document.getElementById(`status-${sensor.id}`);
@@ -270,9 +287,9 @@ gradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)');
 gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)');
 
 const chart = new Chart(ctx, {
-  type: "line",
-  data: { labels: [], datasets: [{ label: "dB", data: [], borderColor:"#0D6EFD", backgroundColor: gradient, fill:true, tension:0.3, pointRadius:0 }] },
-  options: { responsive:true, maintainAspectRatio:false, scales:{ x:{display:true, grid:{display:false}}, y:{beginAtZero:false} }, plugins:{legend:{display:false}} }
+    type: "line",
+    data: { labels: [], datasets: [{ label: "dB", data: [], borderColor:"#0D6EFD", backgroundColor: gradient, fill:true, tension:0.3, pointRadius:0 }] },
+    options: { responsive:true, maintainAspectRatio:false, scales:{ x:{display:true, grid:{display:false}}, y:{beginAtZero:false} }, plugins:{legend:{display:false}} }
 });
 
 function openDetail(sensor){
@@ -297,7 +314,8 @@ function loadDashboardData(){
     if(activeRange === "24h") limit = 2000;
     if(activeRange === "7d") limit = 5000;
 
-    const r = query(ref(db, `sensors/${activeSensorId}/leituras`), limitToLast(limit));
+    // 🚨 CORREÇÃO CRÍTICA: O path agora é /leituras/${activeSensorId}
+    const r = query(ref(db, `leituras/${activeSensorId}`), limitToLast(limit));
     detailListener = r;
 
     onValue(r, (snap) => {
@@ -305,6 +323,16 @@ function loadDashboardData(){
         if(!data) {
             cachedData = [];
             renderTable();
+            // Limpa dados em tempo real
+            document.getElementById('valorAtual').textContent = "--";
+            document.getElementById('barColor').style.background = "#eee";
+            document.getElementById('minVal').textContent = "--";
+            document.getElementById('maxVal').textContent = "--";
+            document.getElementById('avgVal').textContent = "--";
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+            chart.update();
+
             return;
         }
         
@@ -364,7 +392,7 @@ function renderTable(){
         const rowVal = Number(v.db);
         const rowSt = getStatusColor(rowVal);
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${formatTime(v.timestamp)}</td><td><b>${rowVal.toFixed(1)}</b></td><td><span style="color:${rowSt.border}; font-weight:bold">${rowSt.text}</span></td>`;
+        tr.innerHTML = `<td>${formatTime(v.timestamp)}</td><td><b>${rowVal.toFixed(1)}</b></td><td><span class="sensor-status ${rowSt.class}">${rowSt.text}</span></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -385,6 +413,7 @@ document.getElementById('btnBack').addEventListener('click', () => {
     document.getElementById('view-detail').style.display = 'none';
     document.getElementById('btnBack').style.display = 'none';
     document.getElementById('pageTitle').textContent = "Mapa Geral de Ruído";
+    // Desliga o listener detalhado ao voltar para economizar recursos
     if(detailListener) { off(detailListener); detailListener = null; }
 });
 
