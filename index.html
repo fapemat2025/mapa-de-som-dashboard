@@ -1,404 +1,87 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Central de Monitoramento Sonoro</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Monitoramento de Som - Salas</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
 <style>
-    /* ========== ESTILOS GERAIS ========== */
-    body { margin:0; padding:0; background:#F5F7FB; font-family:'Inter', sans-serif; color: #333; }
-    
-    .header { 
-        background:#0D6EFD; padding:16px 20px; color:white; 
-        display: flex; justify-content: space-between; align-items: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-    }
-    .header-title { font-size:20px; font-weight:600; }
-    .back-btn { 
-        display:none;
-        background: rgba(255,255,255,0.2); border:none; color:white; 
-        padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;
-    }
-    .back-btn:hover { background: rgba(255,255,255,0.3); }
-
-    .container { padding:20px; max-width: 1400px; margin: 0 auto; }
-
-    /* ========== MAPA GERAL ========== */
-    #view-map { display: block; }
-    
-    .sensor-grid { 
-        display: grid; 
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-        gap: 20px; 
-    }
-
-    .sensor-card {
-        background: white; border-radius: 12px; padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-        border-left: 6px solid #ccc; position: relative;
-    }
-    .sensor-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
-    
-    .sensor-name { font-size: 16px; font-weight: 700; color: #555; margin-bottom: 5px; text-transform: uppercase; }
-    .sensor-value { font-size: 42px; font-weight: 800; color: #333; }
-    .sensor-status { font-size: 14px; font-weight: 600; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 10px; }
-    .sensor-update { font-size: 12px; color: #999; margin-top: 10px; }
-    .sensor-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; opacity: 0.2; }
-
-    /* Cores de Status */
-    .status-normal { color: #2ECC71; background: rgba(46, 204, 113, 0.1); }
-    .status-atencao { color: #F1C40F; background: rgba(241, 196, 15, 0.1); }
-    .status-alto { color: #E74C3C; background: rgba(231, 76, 60, 0.1); }
-    
-    /* ========== DASHBOARD DETALHADO ========== */
-    #view-detail { display: none; }
-    
-    .detail-layout { display:flex; gap:20px; flex-wrap:wrap; }
-    .left { flex:1; min-width:300px; display: flex; flex-direction: column; gap: 20px; }
-    .right { width:320px; min-width:280px; display:flex; flex-direction:column; gap:20px; }
-    
-    .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
-    
-    /* Cabeçalho do Card com Filtros */
-    .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px; }
-    .card-title { font-size:14px; text-transform: uppercase; font-weight:700; color:#555; margin:0; }
-    
-    /* Filtros da Tabela */
-    .table-filters { display: flex; gap: 5px; }
-    .tf-btn {
-        border: 1px solid #ddd; background: #f9f9f9; padding: 4px 10px;
-        border-radius: 6px; font-size: 11px; font-weight: 600; color: #666; cursor: pointer;
-    }
-    .tf-btn:hover { background: #eee; }
-    .tf-btn.active { color: white; border-color: transparent; }
-    /* Cores ativas dos botões da tabela */
-    .tf-btn[data-filter="all"].active { background: #333; }
-    .tf-btn[data-filter="normal"].active { background: #2ECC71; }
-    .tf-btn[data-filter="atencao"].active { background: #F1C40F; }
-    .tf-btn[data-filter="alto"].active { background: #E74C3C; }
-
-    .graph-card { height:400px; }
-    #chart { width:100% !important; height:100% !important; }
-    
-    .value-display { font-size:48px; font-weight:700; color:#0D6EFD; text-align:center; }
-    .mini-bar { height:12px; border-radius:6px; background:#eee; margin-top: 5px;}
-    
-    /* Filtros de Tempo */
-    .filters { display:flex; gap:8px; flex-wrap: wrap; margin-top: 10px;}
-    .filter-btn { padding:6px 12px; font-size:12px; border:1px solid #0D6EFD; background:transparent; color:#0D6EFD; border-radius:20px; cursor:pointer; }
-    .filter-btn.active { background:#0D6EFD; color:white; }
-
-    .table-container { max-height: 250px; overflow: auto; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    thead { position:sticky; top:0; background:#fff; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    td, th { padding:8px 10px; border-bottom: 1px solid #eee; text-align: left;}
-
-    @media(max-width:800px){
-        .right { width: 100%; flex-direction: row; }
-        .right .card { flex: 1; }
-        .sensor-grid { grid-template-columns: 1fr; }
-        .card-header-flex { flex-direction: column; align-items: flex-start; }
-    }
+body { font-family: Arial; text-align:center; background:#f5f5f5; }
+.mapa-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:900px; margin:auto; }
+.sala { padding:20px; border-radius:10px; color:white; font-size:22px; font-weight:bold; }
+.db-resumo { font-size:32px; margin-top:10px; }
+.sala-verde { background:#2ecc71; }
+.sala-amarela { background:#f1c40f; }
+.sala-vermelha { background:#e74c3c; }
+.sala-carregando { background:#95a5a6; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<div class="header">
-    <div class="header-title" id="pageTitle">Mapa Geral de Ruído</div>
-    <button class="back-btn" id="btnBack">← Voltar</button>
+<h1>Monitoramento em Tempo Real 📡</h1>
+<p>Clique em uma sala para detalhes</p>
+
+<div class="mapa-grid">
+
+<div class="sala sala-carregando" id="Sala_1">
+    Sala 1
+    <div class="db-resumo" id="db-Sala_1">--</div>
 </div>
 
-<div class="container">
+<div class="sala sala-carregando" id="Sala_2">
+    Sala 2
+    <div class="db-resumo" id="db-Sala_2">--</div>
+</div>
 
-    <div id="view-map">
-        <div class="sensor-grid" id="gridContainer">
-            </div>
-    </div>
-
-    <div id="view-detail">
-        <div class="detail-layout">
-            <div class="left">
-                
-                <div class="card">
-                    <div class="card-title">Histórico: <span id="currentSensorName">--</span></div>
-                    <div class="filters">
-                        <button class="filter-btn active" data-range="30m">30 min</button>
-                        <button class="filter-btn" data-range="1h">1h</button>
-                        <button class="filter-btn" data-range="24h">24h</button>
-                        <button class="filter-btn" data-range="7d">7 dias</button>
-                    </div>
-                </div>
-
-                <div class="card graph-card">
-                    <canvas id="chart"></canvas>
-                </div>
-
-                <div class="card">
-                    <div class="card-header-flex">
-                        <div class="card-title">Registros Detalhados</div>
-                        <div class="table-filters">
-                            <button class="tf-btn active" data-filter="all">Todos</button>
-                            <button class="tf-btn" data-filter="normal">Normal</button>
-                            <button class="tf-btn" data-filter="atencao">Atenção</button>
-                            <button class="tf-btn" data-filter="alto">Crítico</button>
-                        </div>
-                    </div>
-                    
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Hora</th><th>dB</th><th>Status</th></tr></thead>
-                            <tbody id="tableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="right">
-                <div class="card">
-                    <div class="card-title">Ao Vivo</div>
-                    <div id="valorAtual" class="value-display">--</div>
-                    <div class="mini-bar" id="barColor"></div>
-                    <div style="text-align:center; font-size:12px; color:#999; margin-top:5px;">Tempo Real</div>
-                </div>
-                <div class="card">
-                    <div class="card-title">Estatísticas (Período)</div>
-                    <div style="margin-bottom:5px;">Min: <b id="minVal">--</b> dB</div>
-                    <div style="margin-bottom:5px;">Max: <b id="maxVal">--</b> dB</div>
-                    <div>Média: <b id="avgVal">--</b> dB</div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="sala sala-carregando" id="Sala_3">
+    Sala 3
+    <div class="db-resumo" id="db-Sala_3">--</div>
+</div>
 
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, query, limitToLast, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+<script>
 
+// CONFIG FIREBASE
 const firebaseConfig = {
-  apiKey: "AIzaSyC7TIITtyZhIfJQ0KUiwdsZsxoZL0C_JFc",
-  authDomain: "mapasesom2025.firebaseapp.com",
-  databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
-  projectId: "mapasesom2025",
-  storageBucket: "mapasesom2025.appspot.com",
-  messagingSenderId: "504965389065",
-  appId: "1:504965389065:web:4ddb06768218c9c6e98780"
+    apiKey: "yBe1k678KMGvygizrLbMLNkQzRYsWF0umQP3T693",
+    databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
+    projectId: "mapasesom2025"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-// MAPA DE SENSORES
-const SENSORS = [
-    { id: "sala1", name: "Sala 01 - Recepção" },
-    { id: "sala2", name: "Sala 02 - Produção" },
-    { id: "sala3", name: "Sala 03 - Reunião" },
-    { id: "sala4", name: "Sala 04 - Corredor" },
-    { id: "sala5", name: "Sala 05 - Externa" }
-];
-
-/* ================== ESTADO ================== */
-let activeSensorId = null;
-let activeRange = "30m";
-let detailListener = null;
-
-// Armazena dados brutos para filtrar localmente sem recarregar o banco
-let cachedData = []; 
-let tableFilter = "all"; // all, normal, atencao, alto
-
-/* ================== HELPERS ================== */
-function fixTimestamp(ts){
-  const n = Number(ts); return isNaN(n) ? Date.now() : (n < 2000000000 ? n * 1000 : n);
-}
-function formatTime(ts){
-  return new Date(fixTimestamp(ts)).toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
-}
-function getStatusColor(db){
-    if(db < 60) return { color: "#2ECC71", text: "Normal", class: "status-normal", border: "#2ECC71", code: "normal" };
-    if(db < 75) return { color: "#F1C40F", text: "Atenção", class: "status-atencao", border: "#F1C40F", code: "atencao" };
-    return { color: "#E74C3C", text: "Crítico", class: "status-alto", border: "#E74C3C", code: "alto" };
+function cor(db){
+    if(db > 70) return "sala-vermelha";
+    if(db >= 50) return "sala-amarela";
+    return "sala-verde";
 }
 
-/* ================== MAPA ================== */
-const gridContainer = document.getElementById('gridContainer');
+["Sala_1","Sala_2","Sala_3"].forEach(sala => {
 
-function initMap(){
-    gridContainer.innerHTML = "";
-    SENSORS.forEach(sensor => {
-        const card = document.createElement('div');
-        card.className = "sensor-card";
-        card.innerHTML = `
-            <div class="sensor-name">${sensor.name}</div>
-            <div class="sensor-value" id="val-${sensor.id}">--</div>
-            <div class="sensor-status" id="status-${sensor.id}">Offline</div>
-            <div class="sensor-update" id="time-${sensor.id}">--:--</div>
-            <div class="sensor-icon">🔊</div>
-        `;
-        card.addEventListener('click', () => openDetail(sensor));
-        gridContainer.appendChild(card);
+    const ref = db.ref("leituras/"+sala).limitToLast(1);
 
-        const r = query(ref(db, `sensors/${sensor.id}/leituras`), limitToLast(1));
-        onValue(r, (snap) => {
-            const data = snap.val();
-            if(!data) return;
-            const reading = Object.values(data)[0];
-            
-            const valEl = document.getElementById(`val-${sensor.id}`);
-            const statusEl = document.getElementById(`status-${sensor.id}`);
-            const timeEl = document.getElementById(`time-${sensor.id}`);
-            
-            const dbVal = Number(reading.db);
-            const status = getStatusColor(dbVal);
-            
-            valEl.textContent = dbVal.toFixed(1) + " dB";
-            valEl.style.color = status.border;
-            statusEl.textContent = status.text;
-            statusEl.className = `sensor-status ${status.class}`;
-            timeEl.textContent = formatTime(reading.timestamp);
-            card.style.borderLeftColor = status.border;
-        });
-    });
-}
+    ref.on("value", snap => {
 
-/* ================== DETALHES ================== */
-const ctx = document.getElementById("chart").getContext("2d");
-const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-gradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)');
-gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)');
-
-const chart = new Chart(ctx, {
-  type: "line",
-  data: { labels: [], datasets: [{ label: "dB", data: [], borderColor:"#0D6EFD", backgroundColor: gradient, fill:true, tension:0.3, pointRadius:0 }] },
-  options: { responsive:true, maintainAspectRatio:false, scales:{ x:{display:true, grid:{display:false}}, y:{beginAtZero:false} }, plugins:{legend:{display:false}} }
-});
-
-function openDetail(sensor){
-    activeSensorId = sensor.id;
-    document.getElementById('currentSensorName').textContent = sensor.name;
-    document.getElementById('pageTitle').textContent = sensor.name;
-    document.getElementById('view-map').style.display = 'none';
-    document.getElementById('view-detail').style.display = 'block';
-    document.getElementById('btnBack').style.display = 'block';
-    
-    // Reset Filtros
-    tableFilter = "all";
-    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('.tf-btn[data-filter="all"]').classList.add('active');
-
-    loadDashboardData();
-}
-
-function loadDashboardData(){
-    if(detailListener) { off(detailListener); detailListener = null; }
-    let limit = 100;
-    if(activeRange === "24h") limit = 2000;
-    if(activeRange === "7d") limit = 5000;
-
-    const r = query(ref(db, `sensors/${activeSensorId}/leituras`), limitToLast(limit));
-    detailListener = r;
-
-    onValue(r, (snap) => {
         const data = snap.val();
-        if(!data) {
-            cachedData = [];
-            renderTable();
-            return;
-        }
-        
-        const arr = Object.values(data);
-        arr.sort((a,b)=> fixTimestamp(a.timestamp) - fixTimestamp(b.timestamp));
-        
-        // Salva para filtrar a tabela depois
-        cachedData = arr;
+        if(!data) return;
 
-        // 1. Ao Vivo
-        const last = arr[arr.length-1];
-        const lastVal = Number(last.db);
-        document.getElementById('valorAtual').textContent = lastVal.toFixed(1) + " dB";
-        document.getElementById('barColor').style.background = getStatusColor(lastVal).border;
+        const key = Object.keys(data)[0];
+        const registro = data[key];
+        const dbValue = registro.db;
 
-        // 2. Stats
-        const vals = arr.map(v=>Number(v.db));
-        document.getElementById('minVal').textContent = Math.min(...vals).toFixed(1);
-        document.getElementById('maxVal').textContent = Math.max(...vals).toFixed(1);
-        document.getElementById('avgVal').textContent = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+        document.getElementById("db-"+sala).innerText = dbValue.toFixed(1)+" dB";
 
-        // 3. Gráfico (Sempre mostra tudo para dar contexto)
-        let chartData = arr;
-        if(arr.length > 200) {
-            chartData = [];
-            const step = Math.ceil(arr.length / 150);
-            for(let i=0; i<arr.length; i+=step) chartData.push(arr[i]);
-        }
-        chart.data.labels = chartData.map(v => formatTime(v.timestamp));
-        chart.data.datasets[0].data = chartData.map(v => Number(v.db));
-        chart.update();
-
-        // 4. Renderiza Tabela (com filtro atual)
-        renderTable();
-    });
-}
-
-function renderTable(){
-    const tbody = document.getElementById('tableBody');
-    tbody.innerHTML = "";
-    
-    // 1. Aplica o filtro selecionado
-    const filtered = cachedData.filter(item => {
-        if(tableFilter === "all") return true;
-        const code = getStatusColor(Number(item.db)).code;
-        return code === tableFilter;
+        const salaDiv = document.getElementById(sala);
+        salaDiv.className = "sala " + cor(dbValue);
     });
 
-    // 2. Se vazio
-    if(filtered.length === 0){
-        tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;color:#999'>Nenhum registro com este status.</td></tr>";
-        return;
-    }
-
-    // 3. Renderiza os últimos 50 do filtro
-    filtered.slice(-50).reverse().forEach(v => {
-        const rowVal = Number(v.db);
-        const rowSt = getStatusColor(rowVal);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${formatTime(v.timestamp)}</td><td><b>${rowVal.toFixed(1)}</b></td><td><span style="color:${rowSt.border}; font-weight:bold">${rowSt.text}</span></td>`;
-        tbody.appendChild(tr);
-    });
-}
-
-// Listeners Filtros da Tabela
-document.querySelectorAll('.tf-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        tableFilter = btn.dataset.filter;
-        renderTable();
-    });
 });
-
-// Listeners Gerais
-document.getElementById('btnBack').addEventListener('click', () => {
-    document.getElementById('view-map').style.display = 'block';
-    document.getElementById('view-detail').style.display = 'none';
-    document.getElementById('btnBack').style.display = 'none';
-    document.getElementById('pageTitle').textContent = "Mapa Geral de Ruído";
-    if(detailListener) { off(detailListener); detailListener = null; }
-});
-
-document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        activeRange = btn.dataset.range;
-        loadDashboardData();
-    });
-});
-
-initMap();
 
 </script>
+
 </body>
 </html>
