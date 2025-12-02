@@ -6,113 +6,101 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-    /* ========== ESTILOS GERAIS ========== */
-    body { margin:0; padding:0; background:#F5F7FB; font-family:'Inter', sans-serif; color: #333; }
-    
-    .header { 
-        background:#0D6EFD; padding:16px 20px; color:white; 
-        display: flex; justify-content: space-between; align-items: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-    }
-    .header-title { font-size:20px; font-weight:600; }
-    .back-btn { 
-        display:none;
-        background: rgba(255,255,255,0.2); border:none; color:white; 
-        padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;
-    }
-    .back-btn:hover { background: rgba(255,255,255,0.3); }
+    /* ========== ESTILOS GERAIS ========== */
+    body { margin:0; padding:0; background:#F5F7FB; font-family:'Inter', sans-serif; color: #333; }
+    
+    .header { 
+        background:#0D6EFD; padding:16px 20px; color:white; 
+        display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    }
+    .header-title { font-size:20px; font-weight:600; }
+    .back-btn { 
+        display:none;
+        background: rgba(255,255,255,0.2); border:none; color:white; 
+        padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.3); }
 
-    .container { padding:20px; max-width: 1400px; margin: 0 auto; }
+    .container { padding:20px; max-width: 1400px; margin: 0 auto; }
 
-    /* ========== MAPA GERAL ========== */
-    #view-map { display: block; }
-    
-    .sensor-grid { 
-        display: grid; 
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-        gap: 20px; 
-    }
-
-    .sensor-card {
-        background: white; border-radius: 12px; padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-        border-left: 6px solid #ccc; position: relative;
-        /* 🚀 AJUSTE DE LAYOUT INTERNO */
-        display: flex; 
-        flex-direction: column;
-        justify-content: space-between;
-        /* Fim do ajuste */
-    }
-    .sensor-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
-    
-    /* 🚀 NOVO: Para agrupar valor e status */
-    .sensor-value-group {
-        margin-top: 10px;
-        margin-bottom: 10px;
-        flex-grow: 1; /* Permite que o grupo ocupe espaço extra */
+    /* ========== MAPA GERAL ========== */
+    #view-map { display: block; }
+    
+    .sensor-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+        gap: 20px; 
     }
 
-    .sensor-name { font-size: 16px; font-weight: 700; color: #555; margin-bottom: 5px; text-transform: uppercase; }
-    .sensor-value { font-size: 42px; font-weight: 800; color: #333; }
-    .sensor-status { font-size: 14px; font-weight: 600; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 10px; }
-    .sensor-update { font-size: 12px; color: #999; margin-top: 10px; }
-    .sensor-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; opacity: 0.2; }
+    .sensor-card {
+        background: white; border-radius: 12px; padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 6px solid #ccc; position: relative;
+    }
+    .sensor-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+    
+    .sensor-name { font-size: 16px; font-weight: 700; color: #555; margin-bottom: 5px; text-transform: uppercase; }
+    .sensor-value { font-size: 42px; font-weight: 800; color: #333; }
+    .sensor-status { font-size: 14px; font-weight: 600; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 10px; }
+    .sensor-update { font-size: 12px; color: #999; margin-top: 10px; }
+    .sensor-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; opacity: 0.2; }
 
-    /* Cores de Status */
-    .status-normal { color: #2ECC71; background: rgba(46, 204, 113, 0.1); }
-    .status-atencao { color: #F1C40F; background: rgba(241, 196, 15, 0.1); }
-    .status-alto { color: #E74C3C; background: rgba(231, 76, 60, 0.1); }
-    
-    /* ========== DASHBOARD DETALHADO ========== */
-    #view-detail { display: none; }
-    
-    .detail-layout { display:flex; gap:20px; flex-wrap:wrap; }
-    .left { flex:1; min-width:300px; display: flex; flex-direction: column; gap: 20px; }
-    .right { width:320px; min-width:280px; display:flex; flex-direction:column; gap:20px; }
-    
-    .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
-    
-    /* Cabeçalho do Card com Filtros */
-    .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px; }
-    .card-title { font-size:14px; text-transform: uppercase; font-weight:700; color:#555; margin:0; }
-    
-    /* Filtros da Tabela */
-    .table-filters { display: flex; gap: 5px; }
-    .tf-btn {
-        border: 1px solid #ddd; background: #f9f9f9; padding: 4px 10px;
-        border-radius: 6px; font-size: 11px; font-weight: 600; color: #666; cursor: pointer;
-    }
-    .tf-btn:hover { background: #eee; }
-    .tf-btn.active { color: white; border-color: transparent; }
-    /* Cores ativas dos botões da tabela */
-    .tf-btn[data-filter="all"].active { background: #333; }
-    .tf-btn[data-filter="normal"].active { background: #2ECC71; }
-    .tf-btn[data-filter="atencao"].active { background: #F1C40F; }
-    .tf-btn[data-filter="alto"].active { background: #E74C3C; }
+    /* Cores de Status */
+    .status-normal { color: #2ECC71; background: rgba(46, 204, 113, 0.1); }
+    .status-atencao { color: #F1C40F; background: rgba(241, 196, 15, 0.1); }
+    .status-alto { color: #E74C3C; background: rgba(231, 76, 60, 0.1); }
+    
+    /* ========== DASHBOARD DETALHADO ========== */
+    #view-detail { display: none; }
+    
+    .detail-layout { display:flex; gap:20px; flex-wrap:wrap; }
+    .left { flex:1; min-width:300px; display: flex; flex-direction: column; gap: 20px; }
+    .right { width:320px; min-width:280px; display:flex; flex-direction:column; gap:20px; }
+    
+    .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
+    
+    /* Cabeçalho do Card com Filtros */
+    .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px; }
+    .card-title { font-size:14px; text-transform: uppercase; font-weight:700; color:#555; margin:0; }
+    
+    /* Filtros da Tabela */
+    .table-filters { display: flex; gap: 5px; }
+    .tf-btn {
+        border: 1px solid #ddd; background: #f9f9f9; padding: 4px 10px;
+        border-radius: 6px; font-size: 11px; font-weight: 600; color: #666; cursor: pointer;
+    }
+    .tf-btn:hover { background: #eee; }
+    .tf-btn.active { color: white; border-color: transparent; }
+    /* Cores ativas dos botões da tabela */
+    .tf-btn[data-filter="all"].active { background: #333; }
+    .tf-btn[data-filter="normal"].active { background: #2ECC71; }
+    .tf-btn[data-filter="atencao"].active { background: #F1C40F; }
+    .tf-btn[data-filter="alto"].active { background: #E74C3C; }
 
-    .graph-card { height:400px; }
-    #chart { width:100% !important; height:100% !important; }
-    
-    .value-display { font-size:48px; font-weight:700; color:#0D6EFD; text-align:center; }
-    .mini-bar { height:12px; border-radius:6px; background:#eee; margin-top: 5px;}
-    
-    /* Filtros de Tempo */
-    .filters { display:flex; gap:8px; flex-wrap: wrap; margin-top: 10px;}
-    .filter-btn { padding:6px 12px; font-size:12px; border:1px solid #0D6EFD; background:transparent; color:#0D6EFD; border-radius:20px; cursor:pointer; }
-    .filter-btn.active { background:#0D6EFD; color:white; }
+    .graph-card { height:400px; }
+    #chart { width:100% !important; height:100% !important; }
+    
+    .value-display { font-size:48px; font-weight:700; color:#0D6EFD; text-align:center; }
+    .mini-bar { height:12px; border-radius:6px; background:#eee; margin-top: 5px;}
+    
+    /* Filtros de Tempo */
+    .filters { display:flex; gap:8px; flex-wrap: wrap; margin-top: 10px;}
+    .filter-btn { padding:6px 12px; font-size:12px; border:1px solid #0D6EFD; background:transparent; color:#0D6EFD; border-radius:20px; cursor:pointer; }
+    .filter-btn.active { background:#0D6EFD; color:white; }
 
-    .table-container { max-height: 250px; overflow: auto; }
-    table { width:100%; border-collapse:collapse; font-size:13px; }
-    thead { position:sticky; top:0; background:#fff; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    td, th { padding:8px 10px; border-bottom: 1px solid #eee; text-align: left;}
+    .table-container { max-height: 250px; overflow: auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead { position:sticky; top:0; background:#fff; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    td, th { padding:8px 10px; border-bottom: 1px solid #eee; text-align: left;}
 
-    @media(max-width:800px){
-        .right { width: 100%; flex-direction: row; }
-        .right .card { flex: 1; }
-        .sensor-grid { grid-template-columns: 1fr; }
-        .card-header-flex { flex-direction: column; align-items: flex-start; }
-    }
+    @media(max-width:800px){
+        .right { width: 100%; flex-direction: row; }
+        .right .card { flex: 1; }
+        .sensor-grid { grid-template-columns: 1fr; }
+        .card-header-flex { flex-direction: column; align-items: flex-start; }
+    }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
