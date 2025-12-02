@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-
+    /* ========== ESTILOS GERAIS ========== */
     body { margin:0; padding:0; background:#F5F7FB; font-family:'Inter', sans-serif; color: #333; }
     
     .header { 
@@ -38,9 +38,21 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
         border-left: 6px solid #ccc; position: relative;
+        /* 🚀 AJUSTE DE LAYOUT INTERNO */
+        display: flex; 
+        flex-direction: column;
+        justify-content: space-between;
+        /* Fim do ajuste */
     }
     .sensor-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
     
+    /* 🚀 NOVO: Para agrupar valor e status */
+    .sensor-value-group {
+        margin-top: 10px;
+        margin-bottom: 10px;
+        flex-grow: 1; /* Permite que o grupo ocupe espaço extra */
+    }
+
     .sensor-name { font-size: 16px; font-weight: 700; color: #555; margin-bottom: 5px; text-transform: uppercase; }
     .sensor-value { font-size: 42px; font-weight: 800; color: #333; }
     .sensor-status { font-size: 14px; font-weight: 600; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 10px; }
@@ -193,8 +205,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// 🚀 CORREÇÃO APLICADA: IDs em minúsculas (sala1, sala2, etc.) para alinhar com o ESP32.
-// O caminho no ESP32 é /sensors/sala1/leituras
+// IDs em minúsculas (sala1, sala2, etc.) para alinhar com o ESP32
 const SENSORS = [
     { id: "sala1", name: "Sala 01 - Recepção" }, 
     { id: "sala2", name: "Sala 02 - Produção" },
@@ -233,32 +244,34 @@ function initMap(){
     gridContainer.innerHTML = "";
     SENSORS.forEach(sensor => {
         const card = document.createElement('div');
-        card.className = "sensor-card";
-        card.id = `card-${sensor.id}`; // Adiciona ID no card
+        card.className = "sensor-card"; 
+        card.id = `card-${sensor.id}`; 
+        
+        // 🚀 AJUSTE DE LAYOUT INTERNO: Adicionando sensor-value-group
         card.innerHTML = `
             <div class="sensor-name">${sensor.name}</div>
-            <div class="sensor-value" id="val-${sensor.id}">--</div>
-            <div class="sensor-status" id="status-${sensor.id}">Offline</div>
+            <div class="sensor-value-group">
+                <div class="sensor-value" id="val-${sensor.id}">--</div>
+                <div class="sensor-status" id="status-${sensor.id}">Offline</div>
+            </div>
             <div class="sensor-update" id="time-${sensor.id}">--:--</div>
             <div class="sensor-icon"></div>
         `;
         card.addEventListener('click', () => openDetail(sensor));
         gridContainer.appendChild(card);
 
-        // 🚀 CORREÇÃO APLICADA: O path agora é /sensors/${sensor.id}/leituras (Alinhado com o ESP32)
+        // CORREÇÃO DE SINCRONIZAÇÃO: Path alinhado com o ESP32
         const r = query(ref(db, `sensors/${sensor.id}/leituras`), limitToLast(1));
         
         onValue(r, (snap) => {
             const data = snap.val();
             
-            // Verifica se o snapshot tem dados (deve ter um nó de timestamp)
             if(!data) {
                 document.getElementById(`status-${sensor.id}`).textContent = "Offline / Sem Dados";
                 document.getElementById(`card-${sensor.id}`).style.borderLeftColor = "#ccc";
                 return;
             }
             
-            // Pega o último registro (o último timestamp é a chave)
             const reading = Object.values(data)[0]; 
             
             const valEl = document.getElementById(`val-${sensor.id}`);
@@ -273,7 +286,7 @@ function initMap(){
             statusEl.textContent = status.text;
             statusEl.className = `sensor-status ${status.class}`;
             timeEl.textContent = formatTime(reading.timestamp);
-            card.style.borderLeftColor = status.border;
+            document.getElementById(`card-${sensor.id}`).style.borderLeftColor = status.border;
         });
     });
 }
@@ -312,7 +325,7 @@ function loadDashboardData(){
     if(activeRange === "24h") limit = 2000;
     if(activeRange === "7d") limit = 5000;
 
-    // 🚀 CORREÇÃO APLICADA: O path agora é /sensors/${activeSensorId}/leituras (Alinhado com o ESP32)
+    // CORREÇÃO DE SINCRONIZAÇÃO: Path alinhado com o ESP32
     const r = query(ref(db, `sensors/${activeSensorId}/leituras`), limitToLast(limit));
     detailListener = r;
 
