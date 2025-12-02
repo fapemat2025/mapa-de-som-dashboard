@@ -8,7 +8,6 @@
     /* ========== ESTILOS GERAIS ========== */
     body { margin:0; padding:0; background:#F5F7FB; font-family:'Inter', sans-serif; color: #333; }
     
-    /* Header Fixo */
     .header { 
         background:#0D6EFD; padding:16px 20px; color:white; 
         display: flex; justify-content: space-between; align-items: center;
@@ -16,7 +15,7 @@
     }
     .header-title { font-size:20px; font-weight:600; }
     .back-btn { 
-        display:none; /* Escondido na home */
+        display:none;
         background: rgba(255,255,255,0.2); border:none; color:white; 
         padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;
     }
@@ -24,7 +23,7 @@
 
     .container { padding:20px; max-width: 1400px; margin: 0 auto; }
 
-    /* ========== TELA 1: MAPA GERAL (GRID) ========== */
+    /* ========== MAPA GERAL ========== */
     #view-map { display: block; }
     
     .sensor-grid { 
@@ -37,8 +36,7 @@
         background: white; border-radius: 12px; padding: 20px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
-        border-left: 6px solid #ccc; /* Cor da borda indica status */
-        position: relative;
+        border-left: 6px solid #ccc; position: relative;
     }
     .sensor-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
     
@@ -53,38 +51,54 @@
     .status-atencao { color: #F1C40F; background: rgba(241, 196, 15, 0.1); }
     .status-alto { color: #E74C3C; background: rgba(231, 76, 60, 0.1); }
     
-    /* ========== TELA 2: DASHBOARD DETALHADO (Escondido inicialmente) ========== */
+    /* ========== DASHBOARD DETALHADO ========== */
     #view-detail { display: none; }
     
-    /* (Reutilizando estilos do dashboard anterior) */
     .detail-layout { display:flex; gap:20px; flex-wrap:wrap; }
     .left { flex:1; min-width:300px; display: flex; flex-direction: column; gap: 20px; }
     .right { width:320px; min-width:280px; display:flex; flex-direction:column; gap:20px; }
     
     .card { background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
-    .card-title { font-size:14px; text-transform: uppercase; font-weight:700; color:#555; margin-bottom: 10px; }
+    
+    /* Cabeçalho do Card com Filtros */
+    .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px; }
+    .card-title { font-size:14px; text-transform: uppercase; font-weight:700; color:#555; margin:0; }
+    
+    /* Filtros da Tabela */
+    .table-filters { display: flex; gap: 5px; }
+    .tf-btn {
+        border: 1px solid #ddd; background: #f9f9f9; padding: 4px 10px;
+        border-radius: 6px; font-size: 11px; font-weight: 600; color: #666; cursor: pointer;
+    }
+    .tf-btn:hover { background: #eee; }
+    .tf-btn.active { color: white; border-color: transparent; }
+    /* Cores ativas dos botões da tabela */
+    .tf-btn[data-filter="all"].active { background: #333; }
+    .tf-btn[data-filter="normal"].active { background: #2ECC71; }
+    .tf-btn[data-filter="atencao"].active { background: #F1C40F; }
+    .tf-btn[data-filter="alto"].active { background: #E74C3C; }
+
     .graph-card { height:400px; }
     #chart { width:100% !important; height:100% !important; }
     
     .value-display { font-size:48px; font-weight:700; color:#0D6EFD; text-align:center; }
     .mini-bar { height:12px; border-radius:6px; background:#eee; margin-top: 5px;}
     
-    /* Filtros Dashboard */
-    .filters { display:flex; gap:8px; flex-wrap: wrap; margin-bottom: 15px;}
+    /* Filtros de Tempo */
+    .filters { display:flex; gap:8px; flex-wrap: wrap; margin-top: 10px;}
     .filter-btn { padding:6px 12px; font-size:12px; border:1px solid #0D6EFD; background:transparent; color:#0D6EFD; border-radius:20px; cursor:pointer; }
     .filter-btn.active { background:#0D6EFD; color:white; }
 
-    /* Tabela */
     .table-container { max-height: 250px; overflow: auto; }
     table { width:100%; border-collapse:collapse; font-size:13px; }
-    thead { position:sticky; top:0; background:#fff; }
+    thead { position:sticky; top:0; background:#fff; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     td, th { padding:8px 10px; border-bottom: 1px solid #eee; text-align: left;}
 
-    /* Responsividade */
     @media(max-width:800px){
         .right { width: 100%; flex-direction: row; }
         .right .card { flex: 1; }
         .sensor-grid { grid-template-columns: 1fr; }
+        .card-header-flex { flex-direction: column; align-items: flex-start; }
     }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -93,7 +107,7 @@
 
 <div class="header">
     <div class="header-title" id="pageTitle">Mapa Geral de Ruído</div>
-    <button class="back-btn" id="btnBack">← Voltar ao Mapa</button>
+    <button class="back-btn" id="btnBack">← Voltar</button>
 </div>
 
 <div class="container">
@@ -105,8 +119,8 @@
 
     <div id="view-detail">
         <div class="detail-layout">
-            
             <div class="left">
+                
                 <div class="card">
                     <div class="card-title">Histórico: <span id="currentSensorName">--</span></div>
                     <div class="filters">
@@ -122,7 +136,16 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-title">Últimos Registros</div>
+                    <div class="card-header-flex">
+                        <div class="card-title">Registros Detalhados</div>
+                        <div class="table-filters">
+                            <button class="tf-btn active" data-filter="all">Todos</button>
+                            <button class="tf-btn" data-filter="normal">Normal</button>
+                            <button class="tf-btn" data-filter="atencao">Atenção</button>
+                            <button class="tf-btn" data-filter="alto">Crítico</button>
+                        </div>
+                    </div>
+                    
                     <div class="table-container">
                         <table>
                             <thead><tr><th>Hora</th><th>dB</th><th>Status</th></tr></thead>
@@ -137,14 +160,15 @@
                     <div class="card-title">Ao Vivo</div>
                     <div id="valorAtual" class="value-display">--</div>
                     <div class="mini-bar" id="barColor"></div>
+                    <div style="text-align:center; font-size:12px; color:#999; margin-top:5px;">Tempo Real</div>
                 </div>
                 <div class="card">
-                    <div class="card-title">Estatísticas</div>
-                    <div>Min: <b id="minVal">--</b> | Max: <b id="maxVal">--</b></div>
-                    <div>Média: <b id="avgVal">--</b></div>
+                    <div class="card-title">Estatísticas (Período)</div>
+                    <div style="margin-bottom:5px;">Min: <b id="minVal">--</b> dB</div>
+                    <div style="margin-bottom:5px;">Max: <b id="maxVal">--</b> dB</div>
+                    <div>Média: <b id="avgVal">--</b> dB</div>
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -167,8 +191,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// CONFIGURAÇÃO DOS SENSORES
-// Mapeie aqui os IDs que você usará no Firebase
+// MAPA DE SENSORES
 const SENSORS = [
     { id: "sala1", name: "Sala 01 - Recepção" },
     { id: "sala2", name: "Sala 02 - Produção" },
@@ -177,12 +200,14 @@ const SENSORS = [
     { id: "sala5", name: "Sala 05 - Externa" }
 ];
 
-/* ================== ESTADO GLOBAL ================== */
-let currentView = "map"; // map | detail
+/* ================== ESTADO ================== */
 let activeSensorId = null;
 let activeRange = "30m";
-let detailListener = null; // referência para desligar o listener ao sair
-const mapListeners = []; // array para desligar listeners do mapa se necessário
+let detailListener = null;
+
+// Armazena dados brutos para filtrar localmente sem recarregar o banco
+let cachedData = []; 
+let tableFilter = "all"; // all, normal, atencao, alto
 
 /* ================== HELPERS ================== */
 function fixTimestamp(ts){
@@ -192,67 +217,53 @@ function formatTime(ts){
   return new Date(fixTimestamp(ts)).toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
 }
 function getStatusColor(db){
-    if(db < 60) return { color: "#2ECC71", text: "Normal", class: "status-normal", border: "#2ECC71" };
-    if(db < 75) return { color: "#F1C40F", text: "Atenção", class: "status-atencao", border: "#F1C40F" };
-    return { color: "#E74C3C", text: "Crítico", class: "status-alto", border: "#E74C3C" };
+    if(db < 60) return { color: "#2ECC71", text: "Normal", class: "status-normal", border: "#2ECC71", code: "normal" };
+    if(db < 75) return { color: "#F1C40F", text: "Atenção", class: "status-atencao", border: "#F1C40F", code: "atencao" };
+    return { color: "#E74C3C", text: "Crítico", class: "status-alto", border: "#E74C3C", code: "alto" };
 }
 
-/* ================== LÓGICA DO MAPA (HOME) ================== */
+/* ================== MAPA ================== */
 const gridContainer = document.getElementById('gridContainer');
 
 function initMap(){
     gridContainer.innerHTML = "";
-    
     SENSORS.forEach(sensor => {
-        // Cria o card HTML
         const card = document.createElement('div');
         card.className = "sensor-card";
-        card.id = `card-${sensor.id}`;
         card.innerHTML = `
             <div class="sensor-name">${sensor.name}</div>
             <div class="sensor-value" id="val-${sensor.id}">--</div>
-            <div class="sensor-status" id="status-${sensor.id}">Aguardando...</div>
+            <div class="sensor-status" id="status-${sensor.id}">Offline</div>
             <div class="sensor-update" id="time-${sensor.id}">--:--</div>
             <div class="sensor-icon">🔊</div>
         `;
-        // Evento de Clique para abrir Detalhe
         card.addEventListener('click', () => openDetail(sensor));
         gridContainer.appendChild(card);
 
-        // Inicia Listener do Firebase para este sensor (Apenas última leitura)
-        // Caminho esperado: sensors/sala1/leituras
         const r = query(ref(db, `sensors/${sensor.id}/leituras`), limitToLast(1));
-        
         onValue(r, (snap) => {
             const data = snap.val();
             if(!data) return;
-            const reading = Object.values(data)[0]; // Pega o único registro
-            updateMapCard(sensor.id, reading);
+            const reading = Object.values(data)[0];
+            
+            const valEl = document.getElementById(`val-${sensor.id}`);
+            const statusEl = document.getElementById(`status-${sensor.id}`);
+            const timeEl = document.getElementById(`time-${sensor.id}`);
+            
+            const dbVal = Number(reading.db);
+            const status = getStatusColor(dbVal);
+            
+            valEl.textContent = dbVal.toFixed(1) + " dB";
+            valEl.style.color = status.border;
+            statusEl.textContent = status.text;
+            statusEl.className = `sensor-status ${status.class}`;
+            timeEl.textContent = formatTime(reading.timestamp);
+            card.style.borderLeftColor = status.border;
         });
     });
 }
 
-function updateMapCard(id, reading){
-    const valEl = document.getElementById(`val-${id}`);
-    const statusEl = document.getElementById(`status-${id}`);
-    const timeEl = document.getElementById(`time-${id}`);
-    const cardEl = document.getElementById(`card-${id}`);
-    
-    const dbVal = Number(reading.db);
-    const status = getStatusColor(dbVal);
-    
-    valEl.textContent = dbVal.toFixed(1) + " dB";
-    valEl.style.color = status.border; // Texto da cor do status
-    
-    statusEl.textContent = status.text;
-    statusEl.className = `sensor-status ${status.class}`;
-    
-    timeEl.textContent = "Atualizado: " + formatTime(reading.timestamp);
-    cardEl.style.borderLeftColor = status.border;
-}
-
-/* ================== LÓGICA DO DASHBOARD (DETALHE) ================== */
-// Chart config
+/* ================== DETALHES ================== */
 const ctx = document.getElementById("chart").getContext("2d");
 const gradient = ctx.createLinearGradient(0, 0, 0, 400);
 gradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)');
@@ -267,45 +278,47 @@ const chart = new Chart(ctx, {
 function openDetail(sensor){
     activeSensorId = sensor.id;
     document.getElementById('currentSensorName').textContent = sensor.name;
-    document.getElementById('pageTitle').textContent = "Detalhes: " + sensor.name;
-    
-    // Troca telas
+    document.getElementById('pageTitle').textContent = sensor.name;
     document.getElementById('view-map').style.display = 'none';
     document.getElementById('view-detail').style.display = 'block';
     document.getElementById('btnBack').style.display = 'block';
     
+    // Reset Filtros
+    tableFilter = "all";
+    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.tf-btn[data-filter="all"]').classList.add('active');
+
     loadDashboardData();
 }
 
 function loadDashboardData(){
-    // Remove listener anterior se houver
     if(detailListener) { off(detailListener); detailListener = null; }
-
-    // Define limite baseado no filtro
     let limit = 100;
     if(activeRange === "24h") limit = 2000;
     if(activeRange === "7d") limit = 5000;
 
-    // Caminho: sensors/{id}/leituras
     const r = query(ref(db, `sensors/${activeSensorId}/leituras`), limitToLast(limit));
-    detailListener = r; // Salva ref para desligar depois
+    detailListener = r;
 
     onValue(r, (snap) => {
         const data = snap.val();
         if(!data) {
-            chart.data.labels = []; chart.data.datasets[0].data = []; chart.update();
+            cachedData = [];
+            renderTable();
             return;
         }
         
         const arr = Object.values(data);
         arr.sort((a,b)=> fixTimestamp(a.timestamp) - fixTimestamp(b.timestamp));
+        
+        // Salva para filtrar a tabela depois
+        cachedData = arr;
 
-        // 1. Atualiza Ao Vivo
+        // 1. Ao Vivo
         const last = arr[arr.length-1];
         const lastVal = Number(last.db);
         document.getElementById('valorAtual').textContent = lastVal.toFixed(1) + " dB";
-        const st = getStatusColor(lastVal);
-        document.getElementById('barColor').style.background = st.border;
+        document.getElementById('barColor').style.background = getStatusColor(lastVal).border;
 
         // 2. Stats
         const vals = arr.map(v=>Number(v.db));
@@ -313,55 +326,77 @@ function loadDashboardData(){
         document.getElementById('maxVal').textContent = Math.max(...vals).toFixed(1);
         document.getElementById('avgVal').textContent = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
 
-        // 3. Gráfico (Agregação simples se for muito dado)
+        // 3. Gráfico (Sempre mostra tudo para dar contexto)
         let chartData = arr;
         if(arr.length > 200) {
             chartData = [];
             const step = Math.ceil(arr.length / 150);
-            for(let i=0; i<arr.length; i+=step){
-                chartData.push(arr[i]); // Pega amostragem simples para performance
-            }
+            for(let i=0; i<arr.length; i+=step) chartData.push(arr[i]);
         }
-        
         chart.data.labels = chartData.map(v => formatTime(v.timestamp));
         chart.data.datasets[0].data = chartData.map(v => Number(v.db));
         chart.update();
 
-        // 4. Tabela (Últimos 30)
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = "";
-        arr.slice(-30).reverse().forEach(v => {
-            const rowVal = Number(v.db);
-            const rowSt = getStatusColor(rowVal);
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${formatTime(v.timestamp)}</td><td><b>${rowVal.toFixed(1)}</b></td><td><span style="color:${rowSt.border}; font-weight:bold">${rowSt.text}</span></td>`;
-            tbody.appendChild(tr);
-        });
+        // 4. Renderiza Tabela (com filtro atual)
+        renderTable();
     });
 }
 
-// Botão Voltar
+function renderTable(){
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = "";
+    
+    // 1. Aplica o filtro selecionado
+    const filtered = cachedData.filter(item => {
+        if(tableFilter === "all") return true;
+        const code = getStatusColor(Number(item.db)).code;
+        return code === tableFilter;
+    });
+
+    // 2. Se vazio
+    if(filtered.length === 0){
+        tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;color:#999'>Nenhum registro com este status.</td></tr>";
+        return;
+    }
+
+    // 3. Renderiza os últimos 50 do filtro
+    filtered.slice(-50).reverse().forEach(v => {
+        const rowVal = Number(v.db);
+        const rowSt = getStatusColor(rowVal);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${formatTime(v.timestamp)}</td><td><b>${rowVal.toFixed(1)}</b></td><td><span style="color:${rowSt.border}; font-weight:bold">${rowSt.text}</span></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+// Listeners Filtros da Tabela
+document.querySelectorAll('.tf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tableFilter = btn.dataset.filter;
+        renderTable();
+    });
+});
+
+// Listeners Gerais
 document.getElementById('btnBack').addEventListener('click', () => {
     document.getElementById('view-map').style.display = 'block';
     document.getElementById('view-detail').style.display = 'none';
     document.getElementById('btnBack').style.display = 'none';
     document.getElementById('pageTitle').textContent = "Mapa Geral de Ruído";
-    
-    // Desliga listener do detalhe para economizar dados
     if(detailListener) { off(detailListener); detailListener = null; }
 });
 
-// Botões de Filtro de Tempo (no Dashboard)
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         activeRange = btn.dataset.range;
-        loadDashboardData(); // Recarrega com novo limite
+        loadDashboardData();
     });
 });
 
-// Inicializa Mapa
 initMap();
 
 </script>
