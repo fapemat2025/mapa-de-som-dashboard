@@ -1,1 +1,154 @@
-<!DOCTYPE html> <html lang="pt-br"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Mapa de Monitoramento de Som - Resumo</title> <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script> <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script> <style> body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background-color: #f4f4f9; } .mapa-container { max-width: 1000px; margin: 20px auto; padding: 10px; background-color: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); } .mapa-container h1 { color: #2c3e50; } .mapa-grid { display: grid; grid-template-columns: repeat(3, 1fr); /* 3 colunas para 3 salas */ gap: 20px; padding: 20px; } .sala-link { padding: 20px; border-radius: 8px; text-decoration: none; color: white; font-weight: bold; font-size: 1.2em; transition: transform 0.3s, box-shadow 0.3s; cursor: pointer; display: flex; flex-direction: column; /* Organiza nome e dB */ align-items: center; justify-content: center; min-height: 120px; } .sala-link:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3); } .db-resumo { font-size: 1.8em; margin-top: 10px; font-weight: 900; } /* Cores de Status */ .sala-carregando { background-color: #bdc3c7; } /* Cinza (Carregando) */ .sala-verde { background-color: #2ecc71; } /* Verde (Silencioso) */ .sala-amarela { background-color: #f39c12; } /* Amarelo (Atenção) */ .sala-vermelha { background-color: #e74c3c; } /* Vermelho (Alerta) */ </style> </head> <body> <div class="mapa-container"> <h1>Monitoramento de Ruído - Mapa Geral 📢</h1> <p>Status atual em tempo real. Clique para ver o histórico de cada sala.</p> <div class="mapa-grid"> <a href="sala_1.html" class="sala-link sala-carregando" id="link-sala-1"> Sala 1 (Laboratório) <span class="db-resumo" id="db-sala-1">... dB</span> </a> <a href="sala_2.html" class="sala-link sala-carregando" id="link-sala-2"> Sala 2 (Teórica) <span class="db-resumo" id="db-sala-2">... dB</span> </a> <a href="sala_3.html" class="sala-link sala-carregando" id="link-sala-3"> Sala 3 (Audiovisual) <span class="db-resumo" id="db-sala-3">... dB</span> </a> </div> </div> <script> // ---------------------------------------------------- // 🚨 PASSO 1: CONFIGURAÇÃO DO FIREBASE (SUBSTITUA AS CREDENCIAIS) // ---------------------------------------------------- const firebaseConfig = { apiKey: "SEU_API_KEY", authDomain: "SEU_PROJETO.firebaseapp.com", databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com", projectId: "SEU_PROJECT_ID", // ... outras chaves se necessário }; firebase.initializeApp(firebaseConfig); const database = firebase.database(); // ---------------------------------------------------- // PASSO 2: FUNÇÃO PARA DEFINIR COR BASEADA NO DB // ---------------------------------------------------- function getDbClass(dbValue) { if (dbValue > 70) { return 'sala-vermelha'; // Alerta (Ruído Alto) } else if (dbValue >= 50) { return 'sala-amarela'; // Atenção (Moderado) } else { return 'sala-verde'; // Silencioso (Normal) } } // ---------------------------------------------------- // PASSO 3: LEITURA DE DADOS EM TEMPO REAL PARA CADA SALA // ---------------------------------------------------- const salas = ['Sala_1', 'Sala_2', 'Sala_3']; // Adicione todas as suas salas aqui salas.forEach(salaId => { // Referência ao último registro da sala (LimitToLast(1)) const salaRef = database.ref('leituras/' + salaId).limitToLast(1); // Elementos HTML const linkElement = document.getElementById('link-' + salaId.toLowerCase()); const dbElement = document.getElementById('db-' + salaId.toLowerCase()); if (!linkElement || !dbElement) return; // Proteção caso o ID do elemento não exista salaRef.on('value', (snapshot) => { const dadosSala = snapshot.val(); if (dadosSala) { const key = Object.keys(dadosSala)[0]; const registro = dadosSala[key]; const dbValue = registro.db; if (dbValue !== undefined) { const dbFormatado = dbValue.toFixed(1) + ' dB'; const novaClasse = getDbClass(dbValue); // 1. Atualiza o texto do dB dbElement.innerText = dbFormatado; // 2. Atualiza a cor (remove a classe antiga e adiciona a nova) linkElement.className = 'sala-link ' + novaClasse; } else { // Caso o registro seja vazio (improvável se o ESP32 estiver enviando) dbElement.innerText = 'ND'; linkElement.className = 'sala-link sala-carregando'; } } else { // Caso não haja dados no Firebase para esta sala dbElement.innerText = 'Sem Dados'; linkElement.className = 'sala-link sala-carregando'; } }); }); </script> </body> </html>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Monitoramento de Som - Resumo</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background-color: #f4f4f9; }
+        .mapa-container { max-width: 1000px; margin: 20px auto; padding: 10px; background-color: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .mapa-container h1 { color: #2c3e50; }
+        .mapa-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); /* 3 colunas para 3 salas */
+            gap: 20px; 
+            padding: 20px;
+        }
+        .sala-link {
+            padding: 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column; /* Organiza nome e dB */
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+        }
+        .sala-link:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        .db-resumo {
+            font-size: 1.8em;
+            margin-top: 10px;
+            font-weight: 900;
+        }
+        /* Cores de Status */
+        .sala-carregando { background-color: #bdc3c7; } /* Cinza (Carregando) */
+        .sala-verde { background-color: #2ecc71; }    /* Verde (Silencioso) */
+        .sala-amarela { background-color: #f39c12; }  /* Amarelo (Atenção) */
+        .sala-vermelha { background-color: #e74c3c; } /* Vermelho (Alerta) */
+    </style>
+</head>
+<body>
+
+    <div class="mapa-container">
+        <h1>Monitoramento de Ruído - Mapa Geral 📢</h1>
+        <p>Status atual em tempo real. Clique para ver o histórico de cada sala.</p>
+        
+        <div class="mapa-grid">
+            
+            <a href="sala_1.html" class="sala-link sala-carregando" id="link-sala-1">
+                Sala 1 (Laboratório)
+                <span class="db-resumo" id="db-sala-1">... dB</span>
+            </a>
+            
+            <a href="sala_2.html" class="sala-link sala-carregando" id="link-sala-2">
+                Sala 2 (Teórica)
+                <span class="db-resumo" id="db-sala-2">... dB</span>
+            </a>
+            
+            <a href="sala_3.html" class="sala-link sala-carregando" id="link-sala-3">
+                Sala 3 (Audiovisual)
+                <span class="db-resumo" id="db-sala-3">... dB</span>
+            </a>
+            
+            </div>
+    </div>
+    
+    <script>
+        // ----------------------------------------------------
+        // 🚨 PASSO 1: CONFIGURAÇÃO DO FIREBASE (SUBSTITUA AS CREDENCIAIS)
+        // ----------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "SEU_API_KEY", 
+            authDomain: "SEU_PROJETO.firebaseapp.com",
+            databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com", 
+            projectId: "SEU_PROJECT_ID",
+            // ... outras chaves se necessário
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ----------------------------------------------------
+        // PASSO 2: FUNÇÃO PARA DEFINIR COR BASEADA NO DB
+        // ----------------------------------------------------
+        function getDbClass(dbValue) {
+            if (dbValue > 70) {
+                return 'sala-vermelha'; // Alerta (Ruído Alto)
+            } else if (dbValue >= 50) {
+                return 'sala-amarela';  // Atenção (Moderado)
+            } else {
+                return 'sala-verde';    // Silencioso (Normal)
+            }
+        }
+
+        // ----------------------------------------------------
+        // PASSO 3: LEITURA DE DADOS EM TEMPO REAL PARA CADA SALA
+        // ----------------------------------------------------
+        const salas = ['Sala_1', 'Sala_2', 'Sala_3']; // Adicione todas as suas salas aqui
+
+        salas.forEach(salaId => {
+            // Referência ao último registro da sala (LimitToLast(1))
+            const salaRef = database.ref('leituras/' + salaId).limitToLast(1);
+            
+            // Elementos HTML
+            const linkElement = document.getElementById('link-' + salaId.toLowerCase());
+            const dbElement = document.getElementById('db-' + salaId.toLowerCase());
+            
+            if (!linkElement || !dbElement) return; // Proteção caso o ID do elemento não exista
+
+            salaRef.on('value', (snapshot) => {
+                const dadosSala = snapshot.val();
+                
+                if (dadosSala) {
+                    const key = Object.keys(dadosSala)[0];
+                    const registro = dadosSala[key];
+                    const dbValue = registro.db;
+                    
+                    if (dbValue !== undefined) {
+                        const dbFormatado = dbValue.toFixed(1) + ' dB';
+                        const novaClasse = getDbClass(dbValue);
+
+                        // 1. Atualiza o texto do dB
+                        dbElement.innerText = dbFormatado;
+                        
+                        // 2. Atualiza a cor (remove a classe antiga e adiciona a nova)
+                        linkElement.className = 'sala-link ' + novaClasse;
+                    } else {
+                        // Caso o registro seja vazio (improvável se o ESP32 estiver enviando)
+                        dbElement.innerText = 'ND';
+                        linkElement.className = 'sala-link sala-carregando';
+                    }
+                } else {
+                    // Caso não haja dados no Firebase para esta sala
+                    dbElement.innerText = 'Sem Dados';
+                    linkElement.className = 'sala-link sala-carregando';
+                }
+            });
+        });
+
+    </script>
+
+</body>
+</html>
