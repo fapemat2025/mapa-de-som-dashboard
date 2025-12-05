@@ -1,96 +1,624 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Dashboard com dados da Planilha</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8">
+<title>Central de Monitoramento Sonoro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* (mantive seus estilos conforme fornecido) */
+body { margin: 0; padding: 0; background: #F5F7FB; font-family: 'Inter', sans-serif; color: #333; }
+.header { background: #0D6EFD; padding: 16px 20px; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.header-title { font-size: 20px; font-weight: 600; }
+.back-btn { display: none; background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.back-btn:hover { background: rgba(255,255,255,0.3); }
+.container { padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+/* MAPA GERAL */
+#view-map { display: block; }
+.sensor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.sensor-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border-left: 6px solid #ccc; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+.sensor-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+.sensor-value-group { margin-top: 10px; margin-bottom: 10px; flex-grow: 1; }
+.sensor-name { font-size: 16px; font-weight: 700; color: #555; margin-bottom: 5px; text-transform: uppercase; }
+.sensor-value { font-size: 42px; font-weight: 800; color: #333; }
+.sensor-status { font-size: 14px; font-weight: 600; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 10px; }
+.sensor-update { font-size: 12px; color: #999; margin-top: 10px; }
+.sensor-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; opacity: 0.2; }
+.status-normal { color: #2ECC71; background: rgba(46, 204, 113, 0.1); }
+.status-atencao { color: #F1C40F; background: rgba(241, 196, 15, 0.1); }
+.status-alto { color: #E74C3C; background: rgba(231, 76, 60, 0.1); }
+
+/* DASHBOARD DETALHADO */
+#view-detail { display: none; }
+.detail-layout { display: flex; gap: 20px; flex-wrap: wrap; }
+.left { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; }
+.right { width: 320px; min-width: 280px; display: flex; flex-direction: column; gap: 20px; }
+.card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+.card-title { font-size: 14px; text-transform: uppercase; font-weight: 700; color: #555; margin: 0; }
+
+.table-filters { display: flex; gap: 5px; }
+.tf-btn { border: 1px solid #ddd; background: #f9f9f9; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #666; cursor: pointer; }
+.tf-btn:hover { background: #eee; }
+.tf-btn.active { color: white; border-color: transparent; }
+.tf-btn[data-filter="all"].active { background: #333; }
+.tf-btn[data-filter="normal"].active { background: #2ECC71; }
+.tf-btn[data-filter="atencao"].active { background: #F1C40F; }
+.tf-btn[data-filter="alto"].active { background: #E74C3C; }
+
+.graph-card { height: 400px; }
+#chart { width: 100% !important; height: 100% !important; }
+
+.value-display { font-size: 48px; font-weight: 700; color: #0D6EFD; text-align: center; }
+.mini-bar { height: 12px; border-radius: 6px; background: #eee; margin-top: 5px; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.filter-btn { padding: 6px 12px; font-size: 12px; border: 1px solid #0D6EFD; background: transparent; color: #0D6EFD; border-radius: 20px; cursor: pointer; }
+.filter-btn.active { background: #0D6EFD; color: white; }
+
+.table-container { max-height: 250px; overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { position: sticky; top: 0; background: #fff; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+td, th { padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left; }
+
+@media (max-width: 800px) {
+    .right { width: 100%; flex-direction: row; }
+    .right .card { flex: 1; }
+    .sensor-grid { grid-template-columns: 1fr; }
+    .card-header-flex { flex-direction: column; align-items: flex-start; }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <button id="btn-1h">Última 1h</button>
-  <button id="btn-24h">Últimas 24h</button>
-  <button id="btn-7d">Últimos 7 dias</button>
 
-  <canvas id="chart"></canvas>
+<div class="header">
+    <div class="header-title" id="pageTitle">Mapa Geral de Ruído</div>
+    <button class="back-btn" id="btnBack">← Voltar</button>
+</div>
 
-  <div id="liveValue">-- dB</div>
+<div class="container">
+    <div id="view-map">
+        <div class="sensor-grid" id="gridContainer"></div>
+    </div>
 
-  <script type="module">
-    // Link da sua planilha publicada como CSV
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHC1DBRKNj95arNy2CDot0fT4YaZWgNRBHFGRQ6Ms4svNAH05eV04ffjXvtRkrZYSdRDuN03ab3UoC/pub?gid=1681540736&single=true&output=csv";
+    <div id="view-detail">
+        <div class="detail-layout">
+            <div class="left">
+                <div class="card">
+                    <div class="card-title">Histórico: <span id="currentSensorName">--</span></div>
+                    <div class="filters">
+                        <button class="filter-btn active" data-range="30m">30 min (Ao Vivo)</button>
+                        <button class="filter-btn" data-range="1h">1h (Média)</button>
+                        <button class="filter-btn" data-range="24h">24h (Tendência)</button>
+                        <button class="filter-btn" data-range="7d">7 dias</button>
+                    </div>
+                </div>
 
-    // Função para buscar e parsear CSV
-    async function getSheetData() {
-      const res = await fetch(SHEET_CSV_URL);
-      const csv = await res.text();
-      const lines = csv.trim().split("\n");
-      const rows = lines.map(line =>
-        line.split(",").map(item => item.trim())
-      );
-      const headers = rows.shift(); // primeira linha = cabeçalho
+                <div class="card graph-card">
+                    <canvas id="chart"></canvas>
+                </div>
 
-      // Supondo colunas: Sensor, Timestamp, Data/Hora, dB, Status
-      return rows.map(r => ({
-        sensor   : r[0],
-        timestamp: Number(r[1]),
-        db       : Number(r[3]),
-        status   : r[4]
-      }));
+                <div class="card">
+                    <div class="card-header-flex">
+                        <div class="card-title">Registros Detalhados (Últimos Recebidos)</div>
+                        <div class="table-filters">
+                            <button class="tf-btn active" data-filter="all">Todos</button>
+                            <button class="tf-btn" data-filter="normal">Normal</button>
+                            <button class="tf-btn" data-filter="atencao">Atenção</button>
+                            <button class="tf-btn" data-filter="alto">Crítico</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Hora</th><th>dB</th><th>Status</th></tr></thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right">
+                <div class="card">
+                    <div class="card-title">Ao Vivo</div>
+                    <div id="valorAtual" class="value-display">--</div>
+                    <div class="mini-bar" id="barColor"></div>
+                    <div style="text-align:center; font-size:12px; color:#999; margin-top:5px;">Tempo Real</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Estatísticas (Período)</div>
+                    <div style="margin-bottom:5px;">Min: <b id="minVal">--</b> dB</div>
+                    <div style="margin-bottom:5px;">Max: <b id="maxVal">--</b> dB</div>
+                    <div>Média Geral: <b id="avgVal">--</b> dB</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, query, limitToLast, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+// ====== CONFIG FIREBASE (mantive a sua) ======
+const firebaseConfig = {
+    apiKey: "AIzaSyC7TIITtyZhIfJQ0KUiwdsZsxoZL0C_JFc",
+    authDomain: "mapasesom2025.firebaseapp.com",
+    databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
+    projectId: "mapasesom2025",
+    storageBucket: "mapasesom2025.appspot.com",
+    messagingSenderId: "504965389065",
+    appId: "1:504965389065:web:4ddb06768218c9c6e98780"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Sensores (mantive)
+const SENSORS = [
+    { id: "sala1", name: "Sala 01 - 6B e 3A" },
+    { id: "sala2", name: "Sala 02 - Produção" },
+    { id: "sala3", name: "Sala 03 - 6E e 3D" },
+    { id: "sala4", name: "Sala 04 - Corredor" },
+    { id: "sala5", name: "Sala 05 - Externa" }
+];
+
+let activeSensorId = null;
+let activeRange = "30m";
+let detailListener = null;
+let cachedData = []; // dados atualmente exibidos (array de objetos {timestamp, db, ...})
+let tableFilter = "all";
+
+// ====== CONFIG PLANILHA ======
+const SHEET_TSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSoOCyfTb4oPlje4pDTu6mT0MFMZHD6AgbtrZmywa581evTp3MT4fuwiTEIqsYrCUWh3YJMN2-R2gzR/pub?output=tsv";
+
+// cache simples do TSV pra evitar downloads constantes
+let sheetCache = {
+    dataBySensor: {}, // sensor_id => [{timestamp,datetime,db,status,sensor_id}]
+    fetchedAt: 0,
+    ttlMs: 60 * 1000 // 60s
+};
+
+// ====== FUNÇÕES AUXILIARES ======
+function fixTimestamp(ts){
+    const n = Number(ts);
+    if(isNaN(n)) {
+        // tenta parse do formato datetime se for string '2025-12-05 12:00:00'
+        const parsed = Date.parse(ts);
+        return isNaN(parsed) ? Date.now() : parsed;
+    }
+    // se muito pequeno (em segundos), converte para ms
+    return (n < 2000000000) ? n * 1000 : n;
+}
+function formatTime(ts, includeDate = false){
+    const opts = {hour:"2-digit", minute:"2-digit"};
+    if(includeDate) { opts.day = "2-digit"; opts.month = "2-digit"; }
+    return new Date(ts).toLocaleTimeString("pt-BR", opts);
+}
+function getStatusColor(db){
+    if(db < 60) return { color: "#2ECC71", text: "Normal", class: "status-normal", border: "#2ECC71", code: "normal" };
+    if(db < 75) return { color: "#F1C40F", text: "Atenção", class: "status-atencao", border: "#F1C40F", code: "atencao" };
+    return { color: "#E74C3C", text: "Crítico", class: "status-alto", border: "#E74C3C", code: "alto" };
+}
+
+// ====== PARSER DO TSV ======
+async function fetchSheetIfNeeded(){
+    const now = Date.now();
+    if(now - sheetCache.fetchedAt < sheetCache.ttlMs && sheetCache.dataBySensor && Object.keys(sheetCache.dataBySensor).length) {
+        return sheetCache; // retorna cache
     }
 
-    function filterByMinutes(data, minutes) {
-      const now = Date.now();
-      const cutoff = now - minutes * 60 * 1000;
-      return data.filter(item => item.timestamp >= cutoff);
+    // busca TSV
+    try {
+        const res = await fetch(SHEET_TSV_URL);
+        if(!res.ok) throw new Error("Erro ao baixar TSV: " + res.status);
+        const text = await res.text();
+        const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+        if(lines.length === 0) {
+            sheetCache = { dataBySensor: {}, fetchedAt: now, ttlMs: sheetCache.ttlMs };
+            return sheetCache;
+        }
+
+        // cabeçalho
+        const header = lines[0].split("\t").map(h => h.trim());
+        const idx = {};
+        header.forEach((h,i) => idx[h.toLowerCase()] = i);
+
+        // esperamos colunas (sensor_id, timestamp, datetime, db, status)
+        const rows = [];
+        for(let i=1;i<lines.length;i++){
+            const cols = lines[i].split("\t");
+            if(cols.length < 2) continue;
+            const obj = {
+                sensor_id: cols[idx['sensor_id']] ?? cols[idx['sensor']] ?? "",
+                timestamp_raw: cols[idx['timestamp']] ?? "",
+                datetime: cols[idx['datetime']] ?? "",
+                db: cols[idx['db']] ?? "",
+                status: cols[idx['status']] ?? ""
+            };
+            // normaliza
+            obj.timestamp = fixTimestamp(obj.timestamp_raw || obj.datetime || Date.now());
+            obj.db = Number(obj.db);
+            rows.push(obj);
+        }
+
+        // agrupa por sensor
+        const bySensor = {};
+        rows.forEach(r => {
+            const sid = r.sensor_id || "unknown";
+            if(!bySensor[sid]) bySensor[sid] = [];
+            bySensor[sid].push(r);
+        });
+
+        // ordena por timestamp
+        Object.keys(bySensor).forEach(sid => {
+            bySensor[sid].sort((a,b)=> a.timestamp - b.timestamp);
+        });
+
+        sheetCache = { dataBySensor: bySensor, fetchedAt: now, ttlMs: sheetCache.ttlMs };
+        return sheetCache;
+    } catch(err){
+        console.error("Erro fetchSheetIfNeeded:", err);
+        sheetCache = { dataBySensor: {}, fetchedAt: now, ttlMs: sheetCache.ttlMs };
+        return sheetCache;
+    }
+}
+
+// ====== MAPA GERAL (cards) ======
+const gridContainer = document.getElementById('gridContainer');
+
+function initMap(){
+    gridContainer.innerHTML = "";
+    SENSORS.forEach(sensor => {
+        const card = document.createElement('div');
+        card.className = "sensor-card";
+        card.id = `card-${sensor.id}`;
+
+        card.innerHTML = `
+            <div class="sensor-name">${sensor.name}</div>
+            <div class="sensor-value-group">
+                <div class="sensor-value" id="val-${sensor.id}">--</div>
+                <div class="sensor-status" id="status-${sensor.id}">Offline</div>
+            </div>
+            <div class="sensor-update" id="time-${sensor.id}">--:--</div>
+            <div class="sensor-icon"></div>
+        `;
+        card.addEventListener('click', () => openDetail(sensor));
+        gridContainer.appendChild(card);
+
+        // mantém leitura em tempo real para o card (último valor) - sempre via Firebase
+        const r = query(ref(db, `sensors/${sensor.id}/leituras`), limitToLast(1));
+        onValue(r, (snap) => {
+            const data = snap.val();
+            if(!data) {
+                document.getElementById(`status-${sensor.id}`).textContent = "Offline";
+                document.getElementById(`val-${sensor.id}`).textContent = "--";
+                return;
+            }
+            const reading = Object.values(data)[0];
+            const valEl = document.getElementById(`val-${sensor.id}`);
+            const statusEl = document.getElementById(`status-${sensor.id}`);
+            const timeEl = document.getElementById(`time-${sensor.id}`);
+
+            const dbVal = Number(reading.db);
+            const status = getStatusColor(dbVal);
+
+            valEl.textContent = dbVal.toFixed(1) + " dB";
+            valEl.style.color = status.border;
+            statusEl.textContent = status.text;
+            statusEl.className = `sensor-status ${status.class}`;
+            timeEl.textContent = formatTime(fixTimestamp(reading.timestamp));
+            document.getElementById(`card-${sensor.id}`).style.borderLeftColor = status.border;
+        });
+    });
+}
+
+// ====== GRÁFICO ======
+const ctx = document.getElementById("chart").getContext("2d");
+const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+gradient.addColorStop(0, 'rgba(13, 110, 253, 0.4)');
+gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)');
+
+const chart = new Chart(ctx, {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [{
+            label: "dB Médio",
+            data: [],
+            borderColor: "#0D6EFD",
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 2,
+            pointHoverRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: { display: true, grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+            y: { beginAtZero: false }
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.parsed.y.toFixed(1) + ' dB';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// ====== ABRIR DETALHE ======
+function openDetail(sensor){
+    activeSensorId = sensor.id;
+    document.getElementById('currentSensorName').textContent = sensor.name;
+    document.getElementById('pageTitle').textContent = sensor.name;
+    document.getElementById('view-map').style.display = 'none';
+    document.getElementById('view-detail').style.display = 'block';
+    document.getElementById('btnBack').style.display = 'block';
+
+    // Reset filtros da tabela
+    tableFilter = "all";
+    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.tf-btn[data-filter="all"]').classList.add('active');
+
+    loadDashboardData();
+}
+
+/**
+ * processDataForChart mantém sua lógica (raw para 30m, bucket para demais)
+ */
+function processDataForChart(rawData, range) {
+    if(range === '30m') {
+        return {
+            labels: rawData.map(v => formatTime(v.timestamp)),
+            data: rawData.map(v => Number(v.db))
+        };
     }
 
-    // Inicializa Chart.js
-    const ctx = document.getElementById("chart").getContext("2d");
-    const chart = new Chart(ctx, {
-      type: "line",
-      data: { labels: [], datasets: [{ label: "dB", data: [], borderColor: "#0D6EFD", backgroundColor: "rgba(13,110,253,0.2)", fill: true }] },
-      options: { responsive: true, scales: { x: { display: true }, y: { beginAtZero: true } } }
+    let bucketSizeMs = 0;
+    if(range === '1h') bucketSizeMs = 1000 * 60; // 1 minuto
+    else if(range === '24h') bucketSizeMs = 1000 * 60 * 15; // 15 minutos
+    else if(range === '7d') bucketSizeMs = 1000 * 60 * 60 * 4; // 4 horas
+
+    const buckets = {};
+    rawData.forEach(item => {
+        const ts = fixTimestamp(item.timestamp);
+        const val = Number(item.db);
+        const bucketKey = Math.floor(ts / bucketSizeMs) * bucketSizeMs;
+        if(!buckets[bucketKey]) buckets[bucketKey] = { sum: 0, count: 0 };
+        buckets[bucketKey].sum += val;
+        buckets[bucketKey].count++;
     });
 
-    async function updateChartFromSheet(minutes) {
-      const data = await getSheetData();
-      const filtered = filterByMinutes(data, minutes);
-      const labels = filtered.map(d => new Date(d.timestamp).toLocaleTimeString("pt-BR"));
-      const values = filtered.map(d => d.db);
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = values;
-      chart.update();
-    }
+    const processedArray = Object.keys(buckets).sort().map(key => {
+        const b = buckets[key];
+        return { timestamp: Number(key), avg: b.sum / b.count };
+    });
 
-    document.getElementById("btn-1h").onclick  = () => updateChartFromSheet(60);
-    document.getElementById("btn-24h").onclick = () => updateChartFromSheet(60 * 24);
-    document.getElementById("btn-7d").onclick  = () => updateChartFromSheet(60 * 24 * 7);
-
-    // Exemplo de leitura “Ao Vivo” do Firebase (mantém seu Firebase original)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "SUA_API_KEY",
-      authDomain: "…",
-      databaseURL: "https://mapasesom2025-default-rtdb.firebaseio.com",
-      projectId: "…",
-      storageBucket: "…",
-      messagingSenderId: "…",
-      appId: "…"
+    return {
+        labels: processedArray.map(v => {
+            if(range === '7d') return formatTime(v.timestamp, true);
+            return formatTime(v.timestamp);
+        }),
+        data: processedArray.map(v => v.avg)
     };
-    const app = initializeApp(firebaseConfig);
-    const db  = getDatabase(app);
+}
 
-    const LIVE_SENSOR_ID = "sala3"; // ajuste conforme sensor
-    onValue(query(ref(db, `sensors/${LIVE_SENSOR_ID}/leituras`), limitToLast(1)), snap => {
-      const data = snap.val();
-      if (!data) return;
-      const reading = Object.values(data)[0];
-      document.getElementById("liveValue").innerText = Number(reading.db).toFixed(1) + " dB";
+// ====== CARREGA DADOS PARA DASHBOARD ======
+async function loadDashboardData(){
+    // limpa listener anterior
+    if(detailListener) { off(detailListener); detailListener = null; }
+
+    // 30m => realtime via Firebase (últimos registros)
+    if(activeRange === "30m") {
+        // pegar últimos ~1800 registros? ajustável. Usamos limitToLast(1800) para evitar exagero
+        const limit = 1800;
+        const r = query(ref(db, `sensors/${activeSensorId}/leituras`), limitToLast(limit));
+        detailListener = r;
+
+        onValue(r, (snap) => {
+            const data = snap.val();
+            if(!data) {
+                cachedData = [];
+                renderTable();
+                document.getElementById('valorAtual').textContent = "--";
+                document.getElementById('barColor').style.background = "#eee";
+                document.getElementById('minVal').textContent = "--";
+                document.getElementById('maxVal').textContent = "--";
+                document.getElementById('avgVal').textContent = "--";
+                chart.data.labels = []; chart.data.datasets[0].data = []; chart.update();
+                return;
+            }
+
+            const arr = Object.values(data);
+            arr.sort((a,b)=> fixTimestamp(a.timestamp) - fixTimestamp(b.timestamp));
+            // filtramos apenas os últimos 30 minutos (para garantir window)
+            const now = Date.now();
+            const cutoff = now - (30 * 60 * 1000);
+            const last30 = arr.filter(item => fixTimestamp(item.timestamp) >= cutoff);
+
+            cachedData = last30;
+
+            // Atualiza cards
+            if(last30.length > 0){
+                const last = last30[last30.length -1];
+                const lastVal = Number(last.db);
+                document.getElementById('valorAtual').textContent = lastVal.toFixed(1) + " dB";
+                document.getElementById('barColor').style.background = getStatusColor(lastVal).border;
+            } else {
+                document.getElementById('valorAtual').textContent = "--";
+                document.getElementById('barColor').style.background = "#eee";
+            }
+
+            const vals = last30.map(v=>Number(v.db));
+            if(vals.length){
+                document.getElementById('minVal').textContent = Math.min(...vals).toFixed(1);
+                document.getElementById('maxVal').textContent = Math.max(...vals).toFixed(1);
+                const avgTotal = (vals.reduce((a,b)=>a+b,0)/vals.length);
+                document.getElementById('avgVal').textContent = avgTotal.toFixed(1);
+            } else {
+                document.getElementById('minVal').textContent = "--";
+                document.getElementById('maxVal').textContent = "--";
+                document.getElementById('avgVal').textContent = "--";
+            }
+
+            // gráfico - raw last30
+            const chartData = processDataForChart(last30, '30m');
+            chart.data.labels = chartData.labels;
+            chart.data.datasets[0].data = chartData.data;
+            chart.data.datasets[0].pointRadius = chartData.data.length > 50 ? 0 : 3;
+            chart.update();
+
+            renderTable();
+        });
+
+        return;
+    }
+
+    // ====== Para 1h/24h/7d => usamos a planilha TSV ======
+    try {
+        const sheet = await fetchSheetIfNeeded();
+        const allForSensor = sheet.dataBySensor[activeSensorId] ?? [];
+        // filtra pela janela de tempo pedida
+        const now = Date.now();
+        let cutoff = 0;
+        if(activeRange === '1h') cutoff = now - (60 * 60 * 1000); // 1h
+        else if(activeRange === '24h') cutoff = now - (24 * 60 * 60 * 1000); // 24h
+        else if(activeRange === '7d') cutoff = now - (7 * 24 * 60 * 60 * 1000); // 7d
+
+        const filtered = allForSensor.filter(row => {
+            const ts = fixTimestamp(row.timestamp);
+            return ts >= cutoff && ts <= now;
+        });
+
+        // Se o TSV não tiver dados recentes, tentamos também combinar com últimos 30m do Firebase
+        // (opcional) — aqui vamos incluir as leituras do Firebase dos últimos 30m para completar janela
+        // Isso ajuda se a planilha for atualizada com atraso.
+        // Buscamos últimos 1800 registros e combinamos temporariamente (sem gravar no sheetCache).
+        try {
+            const r = query(ref(db, `sensors/${activeSensorId}/leituras`), limitToLast(1800));
+            // leitura pontual via onValue + off logo em seguida
+            let firebaseSnapshot = null;
+            const listener = onValue(r, (snap) => { firebaseSnapshot = snap.val(); });
+            // removemos listener imediatamente (a onValue acima já trouxe valor inicial)
+            off(r);
+            if(firebaseSnapshot) {
+                const arrFb = Object.values(firebaseSnapshot).map(x => ({...x, timestamp: fixTimestamp(x.timestamp)}));
+                // pegamos apenas os últimos 30min do firebase
+                const fbCut = now - (30 * 60 * 1000);
+                const fbFiltered = arrFb.filter(x => x.timestamp >= fbCut && x.timestamp <= now);
+                // combina sem duplicar timestamps (simples: concat e dedupe por timestamp+db)
+                const combinedMap = {};
+                filtered.forEach(rw => combinedMap[`${fixTimestamp(rw.timestamp)}_${rw.db}`] = rw);
+                fbFiltered.forEach(rw => combinedMap[`${fixTimestamp(rw.timestamp)}_${rw.db}`] = rw);
+                const combined = Object.values(combinedMap).map(rw => ({...rw, timestamp: fixTimestamp(rw.timestamp)}));
+                combined.sort((a,b)=> a.timestamp - b.timestamp);
+                cachedData = combined;
+            } else {
+                // sem firebase, usa apenas filtered
+                cachedData = filtered.map(r => ({...r, timestamp: fixTimestamp(r.timestamp)}));
+            }
+        } catch(e){
+            // se erro ao ler firebase pontualmente, usa apenas filtered
+            cachedData = filtered.map(r => ({...r, timestamp: fixTimestamp(r.timestamp)}));
+        }
+
+        // atualiza cards Estat e Ao vivo: valor atual = último registro disponível (priorizando Firebase)
+        if(cachedData.length > 0) {
+            const last = cachedData[cachedData.length - 1];
+            const lastVal = Number(last.db);
+            document.getElementById('valorAtual').textContent = lastVal.toFixed(1) + " dB";
+            document.getElementById('barColor').style.background = getStatusColor(lastVal).border;
+            const vals = cachedData.map(v=>Number(v.db));
+            document.getElementById('minVal').textContent = Math.min(...vals).toFixed(1);
+            document.getElementById('maxVal').textContent = Math.max(...vals).toFixed(1);
+            const avgTotal = (vals.reduce((a,b)=>a+b,0)/vals.length);
+            document.getElementById('avgVal').textContent = avgTotal.toFixed(1);
+        } else {
+            document.getElementById('valorAtual').textContent = "--";
+            document.getElementById('barColor').style.background = "#eee";
+            document.getElementById('minVal').textContent = "--";
+            document.getElementById('maxVal').textContent = "--";
+            document.getElementById('avgVal').textContent = "--";
+        }
+
+        // gráfico com os dados carregados da planilha (já processamos buckets dentro da função)
+        const chartData = processDataForChart(cachedData, activeRange);
+        chart.data.labels = chartData.labels;
+        chart.data.datasets[0].data = chartData.data;
+        chart.data.datasets[0].pointRadius = chartData.data.length > 50 ? 0 : 3;
+        chart.update();
+
+        renderTable();
+    } catch(err){
+        console.error("Erro loadDashboardData (sheet):", err);
+        cachedData = [];
+        renderTable();
+        document.getElementById('valorAtual').textContent = "--";
+        document.getElementById('barColor').style.background = "#eee";
+    }
+}
+
+// ====== RENDER TABLE ======
+function renderTable(){
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = "";
+
+    const filtered = cachedData.filter(item => {
+        if(tableFilter === "all") return true;
+        const code = getStatusColor(Number(item.db)).code;
+        return code === tableFilter;
     });
 
-    // opcional: ao carregar, exibe 1h por padrão
-    updateChartFromSheet(60);
-  </script>
+    if(filtered.length === 0){
+        tbody.innerHTML = "<tr><td colspan='3' style='text-align:center;color:#999'>Nenhum registro.</td></tr>";
+        return;
+    }
+
+    filtered.slice(-30).reverse().forEach(v => {
+        const rowVal = Number(v.db);
+        const rowSt = getStatusColor(rowVal);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${formatTime(fixTimestamp(v.timestamp), true)}</td><td><b>${rowVal.toFixed(1)}</b></td><td><span class="sensor-status ${rowSt.class}">${rowSt.text}</span></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+// ====== EVENT LISTENERS UI ======
+document.querySelectorAll('.tf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tableFilter = btn.dataset.filter;
+        renderTable();
+    });
+});
+
+document.getElementById('btnBack').addEventListener('click', () => {
+    document.getElementById('view-map').style.display = 'block';
+    document.getElementById('view-detail').style.display = 'none';
+    document.getElementById('btnBack').style.display = 'none';
+    document.getElementById('pageTitle').textContent = "Mapa Geral de Ruído";
+    if(detailListener) { off(detailListener); detailListener = null; }
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeRange = btn.dataset.range;
+        loadDashboardData();
+    });
+});
+
+initMap();
+</script>
 </body>
 </html>
